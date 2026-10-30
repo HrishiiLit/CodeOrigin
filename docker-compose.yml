@@ -1,0 +1,56 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: codeorigin-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codeorigin-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - FRONTEND_ORIGIN=http://localhost:3000
+      - MONGODB_URI=mongodb://mongo:27017
+      - MONGODB_DATABASE=codeorigin_ai
+      - UPLOAD_DIR=/app/storage/uploads
+      - MAX_UPLOAD_SIZE_MB=5
+      - ALLOWED_EXTENSIONS=.py
+      - ANALYSIS_TIMEOUT_SECONDS=20
+    volumes:
+      - ./storage/uploads:/app/storage/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: codeorigin-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - INTERNAL_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:
