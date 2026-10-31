@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     MONGODB_CONNECT_TIMEOUT_MS: int = 3000
 
     UPLOAD_DIR: str = "./storage/uploads"
-    MAX_UPLOAD_SIZE_MB: int = 5
-    ALLOWED_EXTENSIONS: Union[List[str], str] = [".py"]
+    MAX_UPLOAD_SIZE_MB: int = 50
+    ALLOWED_EXTENSIONS: Union[List[str], str] = [".py", ".zip", ".tar.gz", ".tgz", ".tar"]
 
     ANALYSIS_TIMEOUT_SECONDS: int = 20
 
