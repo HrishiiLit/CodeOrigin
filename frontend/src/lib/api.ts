@@ -1,4 +1,11 @@
-import { ApiError, HealthResponse, Submission, SubmissionListResponse } from '@/types';
+import {
+  ApiError,
+  GitHubIngestPayload,
+  HealthResponse,
+  RepositoryTreeResponse,
+  Submission,
+  SubmissionListResponse,
+} from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -8,7 +15,13 @@ export class ApiClientError extends Error {
   requestId?: string;
   statusCode: number;
 
-  constructor(message: string, code: string = 'UNKNOWN_ERROR', statusCode: number = 500, details?: any, requestId?: string) {
+  constructor(
+    message: string,
+    code: string = 'UNKNOWN_ERROR',
+    statusCode: number = 500,
+    details?: any,
+    requestId?: string
+  ) {
     super(message);
     this.name = 'ApiClientError';
     this.code = code;
@@ -48,17 +61,25 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export async function checkHealth(): Promise<HealthResponse> {
-  const res = await fetch(`${API_BASE_URL}/health`, {
-    cache: 'no-store',
-  });
+  const res = await fetch(`${API_BASE_URL}/health`, { cache: 'no-store' });
   return handleResponse<HealthResponse>(res);
 }
 
+/** Upload a .py file or .zip/.tar.gz archive */
 export async function uploadSubmission(formData: FormData): Promise<Submission> {
-  // Let the browser set the boundary in multipart/form-data automatically
   const res = await fetch(`${API_BASE_URL}/api/v1/submissions`, {
     method: 'POST',
     body: formData,
+  });
+  return handleResponse<Submission>(res);
+}
+
+/** Ingest a public or private GitHub repository by URL */
+export async function ingestFromGitHub(payload: GitHubIngestPayload): Promise<Submission> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/submissions/github`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   });
   return handleResponse<Submission>(res);
 }
@@ -75,30 +96,26 @@ export async function listSubmissions(params?: {
   if (params?.limit) query.set('limit', params.limit.toString());
   if (params?.offset) query.set('offset', params.offset.toString());
 
-  const queryString = query.toString() ? `?${query.toString()}` : '';
-  const res = await fetch(`${API_BASE_URL}/api/v1/submissions${queryString}`, {
-    cache: 'no-store',
-  });
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  const res = await fetch(`${API_BASE_URL}/api/v1/submissions${qs}`, { cache: 'no-store' });
   return handleResponse<SubmissionListResponse>(res);
 }
 
 export async function getSubmission(id: string): Promise<Submission> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${id}`, {
-    cache: 'no-store',
-  });
+  const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${id}`, { cache: 'no-store' });
   return handleResponse<Submission>(res);
 }
 
-export async function getSubmissionSource(id: string): Promise<string> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${id}/source`, {
-    cache: 'no-store',
-  });
+export async function getRepositoryTree(id: string): Promise<RepositoryTreeResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${id}/tree`, { cache: 'no-store' });
+  return handleResponse<RepositoryTreeResponse>(res);
+}
+
+export async function getSubmissionSource(id: string, filePath?: string): Promise<string> {
+  const qs = filePath ? `?path=${encodeURIComponent(filePath)}` : '';
+  const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${id}/source${qs}`, { cache: 'no-store' });
   if (!res.ok) {
-    throw new ApiClientError(
-      `Failed to load source code (${res.status})`,
-      'SOURCE_FETCH_ERROR',
-      res.status
-    );
+    throw new ApiClientError(`Failed to load source (${res.status})`, 'SOURCE_FETCH_ERROR', res.status);
   }
   return res.text();
 }

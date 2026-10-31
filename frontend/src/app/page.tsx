@@ -70,7 +70,10 @@ export default function DashboardPage() {
           <div className="text-2xl font-bold text-slate-900 mt-2">
             {loading ? '...' : submissions.length}
           </div>
-          <p className="text-xs text-slate-400 mt-1">Active revisions recorded</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {submissions.filter(s => s.submission_type === 'repository').length} repos ·{' '}
+            {submissions.filter(s => s.submission_type === 'file').length} single files
+          </p>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -83,10 +86,10 @@ export default function DashboardPage() {
 
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Language Target
+            Ingestion Modes
           </div>
-          <div className="text-2xl font-bold text-indigo-600 mt-2">Python 3</div>
-          <p className="text-xs text-slate-400 mt-1">Restricted text execution boundary</p>
+          <div className="text-2xl font-bold text-indigo-600 mt-2">3</div>
+          <p className="text-xs text-slate-400 mt-1">.py file · .zip / .tar.gz · GitHub URL</p>
         </div>
       </div>
 
@@ -138,15 +141,26 @@ export default function DashboardPage() {
                   <tr key={sub.submission_id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-900">
                       <div className="font-semibold">{sub.original_filename}</div>
-                      <div className="text-xs text-slate-400 font-mono mt-0.5">
-                        {sub.submission_id.substring(0, 8)}...
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${
+                          sub.submission_type === 'repository'
+                            ? 'bg-violet-50 border-violet-200 text-violet-700'
+                            : 'bg-sky-50 border-sky-200 text-sky-700'
+                        }`}>
+                          {sub.submission_type === 'repository' ? '🗂 Repo' : '🐍 File'}
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">
+                          {sub.submission_id.substring(0, 8)}…
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={sub.status} />
                     </td>
                     <td className="px-6 py-4 text-slate-600 text-xs">
-                      {(sub.size_bytes / 1024).toFixed(1)} KB
+                      {sub.submission_type === 'repository'
+                        ? `${sub.total_files} files (${sub.source_files_count} .py)`
+                        : `${(sub.size_bytes / 1024).toFixed(1)} KB`}
                     </td>
                     <td className="px-6 py-4 font-mono text-xs text-slate-500">
                       {sub.source_sha256.substring(0, 10)}...
