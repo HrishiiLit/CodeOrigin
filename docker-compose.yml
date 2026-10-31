@@ -29,8 +29,9 @@ services:
       - MONGODB_URI=mongodb://mongo:27017
       - MONGODB_DATABASE=codeorigin_ai
       - UPLOAD_DIR=/app/storage/uploads
-      - MAX_UPLOAD_SIZE_MB=5
-      - ALLOWED_EXTENSIONS=.py
+      - MAX_UPLOAD_SIZE_MB=50
+      - ALLOWED_EXTENSIONS=.py,.zip,.tar.gz,.tgz,.tar
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - ANALYSIS_TIMEOUT_SECONDS=20
     volumes:
       - ./storage/uploads:/app/storage/uploads

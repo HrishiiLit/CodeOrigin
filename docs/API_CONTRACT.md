@@ -1,7 +1,7 @@
 # CodeOrigin AI — API Contract
 
-> **Version:** 1.0 (Phase 0 Design Freeze)  
-> **Status:** Approved Baseline  
+> **Version:** 1.1 (Phase 2 — Repository Ingestion)  
+> **Status:** Active  
 > **Base Path:** `/api/v1` (except `/health`)
 
 ---
@@ -39,11 +39,12 @@ Every 4xx/5xx error returned by the API **MUST** conform to the following JSON s
 
 Standard Error Codes:
 - `VALIDATION_ERROR`: Input payload or parameters failed schema validation.
-- `INVALID_FILE_TYPE`: Uploaded file does not have an allowed extension (`.py`).
-- `FILE_TOO_LARGE`: Uploaded file exceeds the configured maximum size (e.g. 5 MB).
+- `INVALID_FILE_TYPE`: Uploaded file does not have an allowed extension (`.py`, `.zip`, `.tar.gz`).
+- `FILE_TOO_LARGE`: Uploaded file exceeds the configured maximum size (e.g. 50 MB).
 - `EMPTY_FILE`: Uploaded file has a content length of 0 bytes.
 - `INVALID_ENCODING`: Uploaded file cannot be decoded as valid text (UTF-8).
 - `RESOURCE_NOT_FOUND`: The requested entity does not exist.
+- `GITHUB_FETCH_ERROR`: GitHub repository could not be fetched (bad URL, auth failure, network error).
 - `UNAUTHORIZED` / `FORBIDDEN`: Access is denied for the given identity/role.
 - `PERSISTENCE_ERROR`: Database or storage operation failed.
 - `INTERNAL_SERVER_ERROR`: An unexpected internal server error occurred.
@@ -88,11 +89,11 @@ Returns the operational health of the FastAPI service and its connected dependen
 ### 2.2 Submissions API (`/api/v1/submissions`)
 
 #### `POST /api/v1/submissions`
-Upload and register a new Python code submission.
+Upload and register a new code submission — a single `.py` file, a `.zip`/`.tar.gz` archive, or a GitHub repository URL.
 
 - **Content-Type:** `multipart/form-data`
 - **Form Fields:**
-  - `file` (File, **Required**): The `.py` source file (max 5 MB).
+  - `file` (File, **Required** for file/archive upload): The source file (`.py`, `.zip`, `.tar.gz`, `.tgz`, `.tar`). Max 50 MB.
   - `project_id` (String UUID, *Optional*): Target project ID. If omitted, the server creates a new default project.
   - `parent_submission_id` (String UUID, *Optional*): ID of the previous submission if this is a revision.
   - `display_name` (String, *Optional*): User-friendly project or revision title.
@@ -106,19 +107,51 @@ Upload and register a new Python code submission.
   "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "owner_id": "demo-user",
   "parent_submission_id": null,
-  "original_filename": "solution.py",
+  "original_filename": "my-project.zip",
   "language": "python",
+  "submission_type": "archive",
   "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "size_bytes": 1024,
+  "size_bytes": 20480,
+  "total_files": 12,
+  "source_files_count": 5,
+  "source_files": ["src/main.py", "src/utils.py", "tests/test_main.py"],
   "status": "queued",
   "created_at": "2026-10-30T18:30:00Z",
   "updated_at": "2026-10-30T18:30:00Z"
 }
 ```
+- **`submission_type` values:** `"file"` (single .py), `"archive"` (zip/tar), `"github"` (GitHub ingestion)
 - **Error Responses:**
   - `400 Bad Request`: `INVALID_FILE_TYPE`, `EMPTY_FILE`, `INVALID_ENCODING`
   - `413 Payload Too Large`: `FILE_TOO_LARGE`
   - `404 Not Found`: `RESOURCE_NOT_FOUND` (if invalid `parent_submission_id`)
+  - `500 Internal Server Error`: `PERSISTENCE_ERROR`
+
+---
+
+#### `POST /api/v1/submissions/github`
+Ingest a GitHub repository directly from its URL without requiring a local file upload.
+
+- **Content-Type:** `application/json`
+- **Request Body:**
+```json
+{
+  "repo_url": "https://github.com/owner/repo",
+  "ref": "main",
+  "project_id": null,
+  "display_name": "My GitHub Repo"
+}
+```
+  - `repo_url` (String, **Required**): Full GitHub repository URL. Supports branch and commit variants (e.g., `/tree/branch`, `/commit/sha`).
+  - `ref` (String, *Optional*): Branch name, tag, or full commit SHA. Defaults to the repository's default branch.
+  - `project_id` (String UUID, *Optional*): Target project. A new project is created if omitted.
+  - `display_name` (String, *Optional*): Friendly label for the ingested repo.
+- **Request Headers:**
+  - `X-User-ID`: (Optional) User identifier.
+- **Response 201 Created:** Same `SubmissionResponse` shape as `POST /api/v1/submissions` with `submission_type: "github"`.
+- **Error Responses:**
+  - `400 Bad Request`: `VALIDATION_ERROR` (malformed URL)
+  - `502 Bad Gateway`: `GITHUB_FETCH_ERROR` (GitHub API unreachable, rate-limited, or repo not found)
   - `500 Internal Server Error`: `PERSISTENCE_ERROR`
 
 ---
@@ -171,9 +204,45 @@ Retrieve the original source code text of the submission for safe preview in the
 
 - **Path Parameters:**
   - `id` (String UUID, **Required**): The submission ID.
+- **Query Parameters:**
+  - `path` (String, *Optional*): Relative file path within a repository submission (e.g., `src/main.py`). Required for `archive` and `github` submission types.
 - **Response 200 OK:**
   - `Content-Type: text/plain; charset=utf-8`
   - Body: Plain text Python source code.
+- **Error Responses:**
+  - `404 Not Found`: `RESOURCE_NOT_FOUND`
+
+---
+
+#### `GET /api/v1/submissions/{id}/tree`
+Return the repository file tree for an archive or GitHub submission.
+
+- **Path Parameters:**
+  - `id` (String UUID, **Required**): The submission ID.
+- **Response 200 OK:**
+```json
+{
+  "submission_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "total_files": 12,
+  "source_files_count": 5,
+  "tree": [
+    {
+      "name": "src",
+      "path": "src",
+      "type": "directory",
+      "children": [
+        {
+          "name": "main.py",
+          "path": "src/main.py",
+          "type": "file",
+          "size_bytes": 1234,
+          "children": []
+        }
+      ]
+    }
+  ]
+}
+```
 - **Error Responses:**
   - `404 Not Found`: `RESOURCE_NOT_FOUND`
 

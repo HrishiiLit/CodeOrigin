@@ -1,7 +1,7 @@
 # CodeOrigin AI — Data Model & Persistence Specification
 
-> **Version:** 1.0 (Phase 0 Design Freeze)  
-> **Status:** Approved Baseline  
+> **Version:** 1.1 (Phase 2 — Repository Ingestion)  
+> **Status:** Active  
 > **Primary Storage:** MongoDB (`codeorigin_ai`)  
 > **Blob Storage:** Private filesystem (`storage/uploads/`)
 
@@ -19,14 +19,20 @@ CodeOrigin Storage
 │   ├── reviews
 │   └── audit_events
 └── Filesystem Blob Storage (Private / Non-executable)
-    └── storage/uploads/{opaque_storage_key}.py
+    ├── storage/uploads/<uuid4>.py          ← single .py file
+    └── storage/uploads/repo_<uuid_hex>/    ← extracted archive or GitHub zipball
+        ├── src/
+        │   └── main.py
+        └── tests/
+            └── test_main.py
 ```
 
 ### Storage Safety Rules:
 1. **Never store files in the web server public root.** Files are kept inside `storage/uploads/` behind private server-side file access endpoints.
-2. **Never name files with user-supplied filenames on disk.** Use a cryptographically generated UUIDv4 opaque key: `<uuid4>.py`.
+2. **Never name files with user-supplied filenames on disk.** Use a cryptographically generated UUIDv4 opaque key: `<uuid4>.py` for single files, `repo_<uuid_hex>/` for archives.
 3. **Verify path containment.** All resolved paths are strictly verified to remain children of `UPLOAD_DIR` to prevent path traversal attacks.
-4. **Never execute uploaded code.** Uploaded files are strictly treated as untrusted text for static analysis AST parsers and linters.
+4. **Zip Slip prevention.** Archive extraction validates every member path to ensure it cannot escape the target directory.
+5. **Never execute uploaded code.** Uploaded files are strictly treated as untrusted text for static analysis AST parsers and linters.
 
 ---
 
@@ -62,17 +68,30 @@ Core record representing an uploaded code revision.
   "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "owner_id": "demo-user",
   "parent_submission_id": null,
-  "original_filename": "solution.py",
+  "original_filename": "my-project.zip",
   "language": "python",
-  "storage_key": "f47ac10b-58cc-4372-a567-0e02b2c3d479.py",
+  "submission_type": "archive",
+  "storage_key": "repo_f47ac10b58cc4372a5670e02b2c3d479",
   "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "size_bytes": 1024,
+  "size_bytes": 20480,
+  "total_files": 12,
+  "source_files_count": 5,
+  "source_files": ["src/main.py", "src/utils.py", "tests/test_main.py"],
   "status": "queued",
   "error_details": null,
   "created_at": "2026-10-30T18:30:00Z",
   "updated_at": "2026-10-30T18:30:00Z"
 }
 ```
+
+**`submission_type` enum:**
+- `"file"` — Single `.py` source file. `storage_key` = `<uuid>.py` flat file.
+- `"archive"` — Extracted `.zip` or `.tar.gz`. `storage_key` = `repo_<uuid_hex>/` directory.
+- `"github"` — GitHub zipball downloaded and extracted. Same storage layout as `"archive"`.
+
+**`storage_key` mapping:**
+- For `"file"`: path is `UPLOAD_DIR/<storage_key>` (a file)
+- For `"archive"` / `"github"`: path is `UPLOAD_DIR/<storage_key>/` (a directory); file access uses `UPLOAD_DIR/<storage_key>/<relative_path>`
 
 **Submission Status Machine:**
 - `queued`: File safely saved, queued for analysis.
