@@ -27,7 +27,16 @@ class DatabaseManager:
             cls.init_indexes()
             return True
         except (ConnectionFailure, PyMongoError) as err:
-            logger.warning(f"Could not connect to MongoDB: {err}. Backend running in degraded mode.")
+            logger.warning(
+                f"Could not connect to MongoDB at {settings.MONGODB_URI} (Connection refused). "
+                "Backend running in degraded mode with in-memory store fallback."
+            )
+            if cls.client:
+                try:
+                    cls.client.close()
+                except Exception:
+                    pass
+                cls.client = None
             cls.db = None
             return False
 
@@ -41,7 +50,7 @@ class DatabaseManager:
 
     @classmethod
     def is_connected(cls) -> bool:
-        if cls.client is None:
+        if cls.client is None or cls.db is None:
             return False
         try:
             cls.client.admin.command("ping")

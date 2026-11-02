@@ -68,3 +68,112 @@ export interface GitHubIngestPayload {
   project_id?: string;
   display_name?: string;
 }
+
+// Phase 3 — Static Analysis
+export type FindingCategory = 'correctness' | 'maintainability' | 'complexity' | 'security' | 'style';
+export type FindingSeverity = 'error' | 'warning' | 'info';
+
+export interface Finding {
+  finding_id: string;
+  tool: string;
+  rule_id: string;
+  category: FindingCategory;
+  severity: FindingSeverity;
+  message: string;
+  file: string;
+  line: number;
+  column: number;
+  end_line?: number | null;
+  end_column?: number | null;
+  suggestion?: string | null;
+}
+
+export interface AnalysisSummary {
+  finding_count: number;
+  error_count: number;
+  warning_count: number;
+  info_count: number;
+}
+
+export interface AnalysisRunResponse {
+  analysis_id: string;
+  submission_id: string;
+  status: string;
+  tool_versions: Record<string, string>;
+  summary: AnalysisSummary;
+  findings: Finding[];
+  duration_ms: number;
+  created_at: string;
+}
+
+// Phase 4 — Revision Comparison
+export interface ComparisonSummary {
+  added_lines: number;
+  removed_lines: number;
+  changed_files: number;
+}
+
+export interface ComparisonResponse {
+  comparison_id: string;
+  base_submission_id: string;
+  target_submission_id: string;
+  summary: ComparisonSummary;
+  diff: string;
+  created_at: string;
+}
+
+export interface ComparisonPayload {
+  base_submission_id: string;
+  target_submission_id: string;
+}
+
+// Phase 5 — Review and Reports
+export interface Review {
+  review_id: string;
+  submission_id: string;
+  author_id: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface CreateReviewPayload {
+  submission_id: string;
+  notes: string;
+  author_id?: string;
+}
+
+export interface ReviewReportResponse {
+  report_id: string;
+  submission_id: string;
+  generated_at: string;
+  submission_metadata: Record<string, any>;
+  analysis_summary?: AnalysisSummary | null;
+  findings_count: number;
+  reviews: Review[];
+  markdown_report: string;
+}
+
+// Authentication & Roles
+export type UserRole = 'student' | 'faculty';
+
+export interface UserProfile {
+  user_id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department?: string;
+  student_id?: string;
+}
+
+export interface LoginPayload {
+  role: UserRole;
+  username: string;
+  password?: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: UserProfile;
+}
+

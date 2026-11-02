@@ -8,14 +8,16 @@ router = APIRouter(tags=["Health"])
 
 
 @router.get("/health", response_model=HealthResponse)
-async def check_health(response: Response):
+async def check_health(response: Response, strict: bool = False):
     db_connected = DatabaseManager.is_connected()
     db_status = "up" if db_connected else "down"
 
     is_healthy = db_connected
     system_status = "healthy" if is_healthy else "degraded"
 
-    if not is_healthy:
+    # In fallback/offline mode, the backend API is fully operational with memory store.
+    # Return 503 only when strict DB verification is requested by infrastructure checks.
+    if strict and not is_healthy:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return HealthResponse(

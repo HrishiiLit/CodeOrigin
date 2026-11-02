@@ -116,5 +116,17 @@ class SubmissionRepository:
                 return True
             return False
 
+    def delete(self, submission_id: str) -> bool:
+        col = self._collection
+        if col is not None:
+            try:
+                res = col.delete_one({"_id": submission_id})
+                return res.deleted_count > 0
+            except Exception as err:
+                logger.error(f"MongoDB delete failed for {submission_id}: {err}")
+                raise PersistenceError(message="Failed to delete submission from database.", details=str(err))
+        else:
+            return self._memory_store.pop(submission_id, None) is not None
+
 
 submission_repository = SubmissionRepository()
