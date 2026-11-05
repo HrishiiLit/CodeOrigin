@@ -66,6 +66,11 @@ class StorageSecurityError(AppException):
         super().__init__(code="STORAGE_SECURITY_VIOLATION", message=message, status_code=400)
 
 
+class MalformedArchiveError(AppException):
+    def __init__(self, message: str = "The uploaded archive file is corrupt or malformed.", details: Any = None):
+        super().__init__(code="MALFORMED_ARCHIVE", message=message, status_code=400, details=details)
+
+
 def format_error_response(code: str, message: str, details: Any = None, request_id: Optional[str] = None) -> dict:
     return {
         "error": {

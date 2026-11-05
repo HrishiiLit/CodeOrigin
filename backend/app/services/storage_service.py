@@ -13,6 +13,7 @@ from app.core.errors import (
     FileTooLargeError,
     InvalidEncodingError,
     InvalidFileTypeError,
+    MalformedArchiveError,
     PersistenceError,
     ResourceNotFoundError,
     StorageSecurityError,
@@ -185,6 +186,10 @@ class StorageService:
         except (AppException, ValueError) as err:
             self.delete_storage(storage_key)
             raise err
+        except (zipfile.BadZipFile, tarfile.ReadError, tarfile.CompressionError) as err:
+            self.delete_storage(storage_key)
+            logger.warning(f"Malformed or corrupted archive uploaded: {err}")
+            raise MalformedArchiveError(message=f"Uploaded archive file is corrupt or invalid: {str(err)}")
         except Exception as err:
             self.delete_storage(storage_key)
             logger.error(f"Failed to extract archive: {err}", exc_info=True)
@@ -195,7 +200,7 @@ class StorageService:
         with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
             for member in zf.infolist():
                 filename = member.filename
-                if filename.startswith("/") or filename.startswith("\\") or ".." in filename:
+                if filename.startswith("/") or filename.startswith("\\") or ".." in filename or ":" in filename:
                     raise StorageSecurityError(f"Potential Zip Slip vulnerability detected in path: {filename}")
 
                 dest_path = (target_dir / filename).resolve()
@@ -218,8 +223,11 @@ class StorageService:
         with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode=mode) as tf:
             for member in tf.getmembers():
                 filename = member.name
-                if filename.startswith("/") or filename.startswith("\\") or ".." in filename:
+                if filename.startswith("/") or filename.startswith("\\") or ".." in filename or ":" in filename:
                     raise StorageSecurityError(f"Potential Tar traversal vulnerability detected: {filename}")
+
+                if member.issym() or member.islnk():
+                    raise StorageSecurityError(f"Symlinks and hardlinks in archives are prohibited: {filename}")
 
                 dest_path = (target_dir / filename).resolve()
                 if not dest_path.is_relative_to(target_dir):
@@ -336,10 +344,14 @@ class StorageService:
             
             # Check effective root first
             candidate = (effective_root / clean_rel).resolve()
+            if not candidate.is_relative_to(base_path):
+                raise StorageSecurityError("Relative file path escapes storage root.")
             if candidate.is_file():
                 target_file = candidate
             else:
                 candidate_base = (base_path / clean_rel).resolve()
+                if not candidate_base.is_relative_to(base_path):
+                    raise StorageSecurityError("Relative file path escapes storage root.")
                 if candidate_base.is_file():
                     target_file = candidate_base
                 else:
@@ -373,9 +385,13 @@ class StorageService:
             
             effective_root = self._get_effective_root(base_path)
             candidate = (effective_root / clean_rel).resolve()
+            if not candidate.is_relative_to(base_path):
+                raise StorageSecurityError("Relative file path escapes storage root.")
             if candidate.is_file():
                 return candidate
             candidate_base = (base_path / clean_rel).resolve()
+            if not candidate_base.is_relative_to(base_path):
+                raise StorageSecurityError("Relative file path escapes storage root.")
             if candidate_base.is_file():
                 return candidate_base
 
