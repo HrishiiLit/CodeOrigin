@@ -9,8 +9,9 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 
+from app.core.errors import ResourceNotFoundError
 from app.schemas.submission import (
     GitHubIngestRequest,
     RepositoryTreeResponse,
@@ -18,6 +19,7 @@ from app.schemas.submission import (
     SubmissionResponse,
 )
 from app.services.github_service import github_service
+from app.services.storage_service import storage_service
 from app.services.submission_service import submission_service
 
 router = APIRouter(prefix="/submissions", tags=["Submissions"])
@@ -123,3 +125,48 @@ def get_submission_source(
 ):
     source_code = submission_service.get_source_code(submission_id, relative_file_path=path)
     return PlainTextResponse(content=source_code, media_type="text/plain; charset=utf-8")
+
+
+@router.get(
+    "/{submission_id}/download",
+    summary="Download submission source file or complete repository archive",
+)
+def download_submission(
+    submission_id: str,
+    path: Optional[str] = Query(None, description="Optional relative file path within repository"),
+):
+    sub_doc = submission_service.repo.find_by_id(submission_id)
+    if not sub_doc:
+        raise ResourceNotFoundError(resource_type="Submission", resource_id=submission_id)
+
+    storage_key = sub_doc.get("storage_key")
+    if not storage_key:
+        raise ResourceNotFoundError(resource_type="Submission file key", resource_id=submission_id)
+
+    file_path = storage_service.get_file_path(storage_key, relative_file_path=path)
+    if file_path.is_file():
+        return FileResponse(
+            path=str(file_path),
+            filename=file_path.name,
+            media_type="application/octet-stream",
+        )
+    elif file_path.is_dir():
+        zip_path = storage_service.create_zip_archive(storage_key)
+        orig_name = sub_doc.get("original_filename", "submission")
+        download_name = f"{orig_name}.zip" if not orig_name.endswith(".zip") else orig_name
+        return FileResponse(
+            path=str(zip_path),
+            filename=download_name,
+            media_type="application/zip",
+        )
+    raise ResourceNotFoundError(resource_type="File", resource_id=submission_id)
+
+
+@router.delete(
+    "/{submission_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete submission record and clean up stored files",
+)
+def delete_submission(submission_id: str):
+    deleted = submission_service.delete_submission(submission_id)
+    return {"status": "deleted", "submission_id": submission_id, "success": deleted}

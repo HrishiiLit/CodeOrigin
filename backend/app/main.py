@@ -1,9 +1,9 @@
 import uuid
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, submissions
+from app.api.routes import analysis, auth, comparisons, health, reviews, submissions
 from app.core.config import settings
 from app.core.database import DatabaseManager
 from app.core.errors import register_error_handlers
@@ -62,7 +62,16 @@ register_error_handlers(app)
 app.include_router(health.router)
 
 # Mount API v1 routes
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(submissions.router, prefix="/api/v1")
+app.include_router(analysis.router, prefix="/api/v1")
+app.include_router(comparisons.router, prefix="/api/v1")
+app.include_router(reviews.router, prefix="/api/v1")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/")

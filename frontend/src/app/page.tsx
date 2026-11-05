@@ -7,7 +7,11 @@ import { Submission } from '@/types';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SubmissionUploadForm } from '@/components/SubmissionUploadForm';
 
+import { useAuth } from '@/context/AuthContext';
+import { GraduationCap, BookOpen, ArrowRight, GitCompare, Plus } from 'lucide-react';
+
 export default function DashboardPage() {
+  const { user, role, switchRole } = useAuth();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showUpload, setShowUpload] = useState<boolean>(false);
@@ -33,7 +37,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fadeIn">
       {/* Hero / Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>

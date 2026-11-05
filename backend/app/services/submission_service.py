@@ -157,6 +157,17 @@ class SubmissionService:
         items = [self._to_response(doc) for doc in docs]
         return SubmissionListResponse(total=total, items=items)
 
+    def delete_submission(self, submission_id: str) -> bool:
+        doc = self.repo.find_by_id(submission_id)
+        if not doc:
+            raise ResourceNotFoundError(resource_type="Submission", resource_id=submission_id)
+
+        storage_key = doc.get("storage_key")
+        if storage_key:
+            self.storage.delete_storage(storage_key)
+
+        return self.repo.delete(submission_id)
+
     @staticmethod
     def _to_response(doc: dict) -> SubmissionResponse:
         sub_type_val = doc.get("submission_type", SubmissionType.FILE.value)

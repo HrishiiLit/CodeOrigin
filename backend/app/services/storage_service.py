@@ -4,7 +4,7 @@ import tarfile
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from app.core.config import settings
 from app.core.errors import (
@@ -63,18 +63,38 @@ IGNORED_EXTENSIONS = {
 
 class StorageService:
     def __init__(self, base_dir: Optional[Path] = None):
-        self.base_dir = (base_dir or settings.resolved_upload_dir).resolve()
+        self.base_dir = (base_dir or settings.resolved_storage_dir).resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.uploads_dir = (self.base_dir / "uploads").resolve()
+        self.processed_dir = (self.base_dir / "processed").resolve()
+        self.generated_dir = (self.base_dir / "generated").resolve()
+        self.uploads_dir.mkdir(parents=True, exist_ok=True)
+        self.processed_dir.mkdir(parents=True, exist_ok=True)
+        self.generated_dir.mkdir(parents=True, exist_ok=True)
 
     def _resolve_safe_path(self, storage_key: str) -> Path:
         """
         Resolves the file path and verifies that it is strictly contained
-        inside the base upload directory to prevent path traversal.
+        inside the base storage directory to prevent path traversal.
+        Supports both direct subpaths ('uploads/...', 'processed/...', 'generated/...')
+        and legacy flat keys ('...py', 'repo_...').
         """
         if ".." in storage_key or storage_key.startswith("/") or storage_key.startswith("\\"):
             raise StorageSecurityError("Illegal characters detected in storage key.")
 
-        target_path = (self.base_dir / storage_key).resolve()
+        clean_key = storage_key.replace("\\", "/").lstrip("/")
+
+        # Check direct resolution under base_dir
+        target_path = (self.base_dir / clean_key).resolve()
+
+        # If it doesn't exist directly under base_dir, check subdirectories for legacy flat keys
+        if not target_path.exists():
+            if (self.uploads_dir / clean_key).exists():
+                target_path = (self.uploads_dir / clean_key).resolve()
+            elif (self.processed_dir / clean_key).exists():
+                target_path = (self.processed_dir / clean_key).resolve()
+            elif (self.generated_dir / clean_key).exists():
+                target_path = (self.generated_dir / clean_key).resolve()
 
         try:
             if not target_path.is_relative_to(self.base_dir):
@@ -87,8 +107,9 @@ class StorageService:
 
     def save_single_file(self, content: bytes, original_filename: str) -> Tuple[str, Path]:
         ext = Path(original_filename).suffix.lower() or ".py"
-        storage_key = f"{uuid.uuid4()}{ext}"
-        file_path = self._resolve_safe_path(storage_key)
+        file_id = f"{uuid.uuid4()}{ext}"
+        storage_key = f"uploads/{file_id}"
+        file_path = self.uploads_dir / file_id
 
         try:
             with open(file_path, "wb") as f:
@@ -99,14 +120,34 @@ class StorageService:
             logger.error(f"Failed to write file to disk: {err}")
             raise PersistenceError(message="Failed to write uploaded source code to storage.", details=str(err))
 
+    def save_generated_file(self, content: Union[str, bytes], filename: str) -> Tuple[str, Path]:
+        clean_name = Path(filename).name
+        file_id = f"{uuid.uuid4().hex[:8]}_{clean_name}"
+        storage_key = f"generated/{file_id}"
+        file_path = self.generated_dir / file_id
+
+        try:
+            if isinstance(content, str):
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+            else:
+                with open(file_path, "wb") as f:
+                    f.write(content)
+            logger.info(f"Safely persisted generated file to storage key: {storage_key}")
+            return storage_key, file_path
+        except IOError as err:
+            logger.error(f"Failed to write generated file to disk: {err}")
+            raise PersistenceError(message="Failed to write generated file to storage.", details=str(err))
+
     def extract_archive(self, archive_bytes: bytes, filename: str) -> Tuple[str, Path, int]:
         """
-        Safely extracts a ZIP or TAR archive into a dedicated directory
+        Safely extracts a ZIP or TAR archive into a dedicated directory in processed/
         preventing Zip Slip / directory traversal vulnerabilities.
         Returns (storage_key_dirname, extraction_dir_path, extracted_file_count).
         """
-        folder_key = f"repo_{uuid.uuid4().hex}"
-        target_dir = self._resolve_safe_path(folder_key)
+        folder_name = f"repo_{uuid.uuid4().hex}"
+        storage_key = f"processed/{folder_name}"
+        target_dir = self.processed_dir / folder_name
         target_dir.mkdir(parents=True, exist_ok=True)
 
         lower_name = filename.lower()
@@ -121,12 +162,12 @@ class StorageService:
                 raise InvalidFileTypeError(f"Unsupported archive format for file '{filename}'.")
             
             logger.info(f"Safely extracted {file_count} files to {target_dir}")
-            return folder_key, target_dir, file_count
+            return storage_key, target_dir, file_count
         except (AppException, ValueError) as err:
-            self.delete_storage(folder_key)
+            self.delete_storage(storage_key)
             raise err
         except Exception as err:
-            self.delete_storage(folder_key)
+            self.delete_storage(storage_key)
             logger.error(f"Failed to extract archive: {err}", exc_info=True)
             raise PersistenceError(message=f"Archive extraction failed: {str(err)}")
 
@@ -294,6 +335,48 @@ class StorageService:
         except IOError as err:
             logger.error(f"Failed to read file from disk: {err}")
             raise PersistenceError(message="Failed to read file from storage.", details=str(err))
+
+    def get_file_path(self, storage_key: str, relative_file_path: Optional[str] = None) -> Path:
+        base_path = self._resolve_safe_path(storage_key)
+        if not base_path.exists():
+            raise ResourceNotFoundError(resource_type="Submission storage", resource_id=storage_key)
+
+        if base_path.is_file():
+            return base_path
+
+        if relative_file_path:
+            clean_rel = relative_file_path.replace("\\", "/").lstrip("/")
+            if ".." in clean_rel:
+                raise StorageSecurityError("Relative file path traversal detected.")
+            target_file = (base_path / clean_rel).resolve()
+            if target_file.is_file():
+                return target_file
+            children = [c for c in base_path.iterdir() if c.is_dir() and c.name not in IGNORED_DIRECTORIES]
+            if children:
+                alt_target = (children[0] / clean_rel).resolve()
+                if alt_target.is_file():
+                    return alt_target
+
+        return base_path
+
+    def create_zip_archive(self, storage_key: str) -> Path:
+        base_path = self._resolve_safe_path(storage_key)
+        if not base_path.exists():
+            raise ResourceNotFoundError(resource_type="Submission storage", resource_id=storage_key)
+
+        zip_name = f"download_{uuid.uuid4().hex[:8]}.zip"
+        zip_path = self.generated_dir / zip_name
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            if base_path.is_file():
+                zf.write(base_path, arcname=base_path.name)
+            else:
+                for root, _, files in os.walk(base_path):
+                    for f in files:
+                        full_f = Path(root) / f
+                        arcname = full_f.relative_to(base_path).as_posix()
+                        zf.write(full_f, arcname=arcname)
+        return zip_path
 
     def delete_storage(self, storage_key: str) -> bool:
         """
