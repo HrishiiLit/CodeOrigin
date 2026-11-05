@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class UserRole(str, Enum):
     STUDENT = "student"
     FACULTY = "faculty"
+    ADMIN = "admin"
 
 
 class UserProfile(BaseModel):

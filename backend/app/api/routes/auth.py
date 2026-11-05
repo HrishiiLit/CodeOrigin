@@ -21,6 +21,13 @@ DEMO_USERS: Dict[str, UserProfile] = {
         role=UserRole.FACULTY,
         department="Computer Science & Engineering",
     ),
+    "admin-root": UserProfile(
+        user_id="admin-root",
+        name="Dean Dr. Eleanor Cross",
+        email="dean.cross@university.edu",
+        role=UserRole.ADMIN,
+        department="Academic Affairs & Computing Governance",
+    ),
 }
 
 
@@ -59,6 +66,16 @@ def login(request: LoginRequest):
                 email=f"{username}@university.edu",
                 role=UserRole.FACULTY,
                 department="Computer Science",
+            )
+        elif request.role == UserRole.ADMIN:
+            if not display_name.startswith("Dean") and not display_name.startswith("Admin"):
+                display_name = f"Admin {display_name}"
+            user_profile = UserProfile(
+                user_id=username,
+                name=display_name,
+                email=f"{username}@admin.university.edu",
+                role=UserRole.ADMIN,
+                department="Academic IT Administration",
             )
         else:
             user_profile = UserProfile(

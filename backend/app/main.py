@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analysis, auth, comparisons, health, integrations, reviews, submissions
+from app.api.routes import admin, analysis, auth, comparisons, health, integrations, reviews, submissions
 from app.core.config import settings
 from app.core.database import DatabaseManager
 from app.core.errors import register_error_handlers
@@ -74,6 +74,7 @@ app.include_router(analysis.router, prefix="/api/v1")
 app.include_router(comparisons.router, prefix="/api/v1")
 app.include_router(reviews.router, prefix="/api/v1")
 app.include_router(integrations.router, prefix="/api/v1")
+app.include_router(admin.router, prefix="/api/v1")
 
 
 @app.get("/favicon.ico", include_in_schema=False)

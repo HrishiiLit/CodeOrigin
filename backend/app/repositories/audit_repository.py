@@ -42,5 +42,31 @@ class AuditRepository:
         logger.info(f"Audit event logged: {action} by {actor_id}")
         return event
 
+    def list_events(self, limit: int = 100) -> List[dict]:
+        col = self._collection
+        if col is not None:
+            try:
+                cursor = col.find().sort("created_at", -1).limit(limit)
+                results = []
+                for doc in cursor:
+                    d = dict(doc)
+                    d["event_id"] = str(d.pop("_id", ""))
+                    if isinstance(d.get("created_at"), datetime):
+                        d["created_at"] = d["created_at"].isoformat()
+                    results.append(d)
+                return results
+            except Exception as err:
+                logger.warning(f"Could not read audit events from MongoDB: {err}")
+        raw = self._store.values()
+        results = []
+        for doc in raw:
+            d = dict(doc)
+            d["event_id"] = str(d.pop("_id", d.get("id", "")))
+            if isinstance(d.get("created_at"), datetime):
+                d["created_at"] = d["created_at"].isoformat()
+            results.append(d)
+        results.sort(key=lambda e: str(e.get("created_at") or ""), reverse=True)
+        return results[:limit]
+
 
 audit_repository = AuditRepository()
