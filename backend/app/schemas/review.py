@@ -26,5 +26,6 @@ class ReviewReportResponse(BaseModel):
     submission_metadata: Dict[str, Any]
     analysis_summary: Optional[AnalysisSummary] = None
     findings_count: int = 0
+    findings: List[Dict[str, Any]] = Field(default_factory=list)
     reviews: List[ReviewResponse] = Field(default_factory=list)
     markdown_report: str

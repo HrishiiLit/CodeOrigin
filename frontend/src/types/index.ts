@@ -149,6 +149,7 @@ export interface ReviewReportResponse {
   submission_metadata: Record<string, any>;
   analysis_summary?: AnalysisSummary | null;
   findings_count: number;
+  findings?: Finding[];
   reviews: Review[];
   markdown_report: string;
 }

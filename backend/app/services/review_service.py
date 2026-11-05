@@ -197,6 +197,7 @@ class ReviewService:
             },
             analysis_summary=analysis_summary,
             findings_count=findings_count,
+            findings=findings_list,
             reviews=reviews,
             markdown_report=markdown_report,
         )

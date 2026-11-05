@@ -9,6 +9,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/context/AuthContext';
 import { BookOpen, ShieldAlert, Repeat, Github } from 'lucide-react';
 import { GitHubIssueModal } from '@/components/GitHubIssueModal';
+import { FacultyReportViewer } from '@/components/FacultyReportViewer';
 
 export default function ReviewPage() {
   const { user, role, switchRole } = useAuth();
@@ -279,32 +280,13 @@ export default function ReviewPage() {
                 )}
               </div>
 
-              {/* Official Report Preview Modal/Card */}
+              {/* Official Report Presentation */}
               {report && (
-                <div className="bg-white rounded-xl border border-indigo-200 p-5 shadow-sm space-y-4 animate-fadeIn">
-                  <div className="flex items-center justify-between border-b border-indigo-100 pb-3">
-                    <div>
-                      <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">Formal Report</span>
-                      <h3 className="text-sm font-bold text-slate-900">Review & Evolution Report ({report.report_id.slice(0, 8)}…)</h3>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const blob = new Blob([report.markdown_report], { type: 'text/markdown;charset=utf-8;' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `report_${selectedSub.original_filename}.md`;
-                        a.click();
-                      }}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition shadow-sm"
-                    >
-                      Download .md Report
-                    </button>
-                  </div>
-
-                  <div className="p-4 bg-slate-950 text-slate-200 font-mono text-xs rounded-lg max-h-[400px] overflow-auto whitespace-pre-wrap leading-relaxed">
-                    {report.markdown_report}
-                  </div>
+                <div className="animate-fadeIn">
+                  <FacultyReportViewer
+                    report={report}
+                    submissionFilename={selectedSub.original_filename}
+                  />
                 </div>
               )}
             </>
