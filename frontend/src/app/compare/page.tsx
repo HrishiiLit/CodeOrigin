@@ -78,6 +78,16 @@ function CompareContent() {
         </p>
       </div>
 
+      {/* Few submissions warning banner */}
+      {!loadingSubs && submissions.length < 2 && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between">
+          <span>⚠️ At least two code submissions are required for revision comparison. Please upload revisions first or run the demo seeder.</span>
+          <Link href="/submissions" className="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-md font-medium transition">
+            Go to Submissions →
+          </Link>
+        </div>
+      )}
+
       {/* Selectors Panel */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

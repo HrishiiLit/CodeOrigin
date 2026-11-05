@@ -10,18 +10,21 @@ import { SubmissionUploadForm } from '@/components/SubmissionUploadForm';
 export default function SubmissionsPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [showUpload, setShowUpload] = useState<boolean>(false);
 
   const fetchSubmissions = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await listSubmissions({
         status: statusFilter || undefined,
       });
       setSubmissions(data.items);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load submissions:', err);
+      setError(err.message || 'Unable to load submissions. Please ensure the backend is running.');
     } finally {
       setLoading(false);
     }
@@ -59,6 +62,22 @@ export default function SubmissionsPage() {
         </div>
       )}
 
+      {/* Error Banner */}
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Connection Error:</span>
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={fetchSubmissions}
+            className="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-semibold rounded-md transition"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Filter Toolbar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -74,6 +93,14 @@ export default function SubmissionsPage() {
             <option value="completed">Completed</option>
             <option value="failed">Failed</option>
           </select>
+          {statusFilter && (
+            <button
+              onClick={() => setStatusFilter('')}
+              className="text-xs text-indigo-600 hover:underline ml-1"
+            >
+              Clear
+            </button>
+          )}
         </div>
         <div className="text-xs text-slate-500">
           Showing <span className="font-semibold text-slate-700">{submissions.length}</span> submissions
@@ -83,10 +110,34 @@ export default function SubmissionsPage() {
       {/* Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-sm text-slate-500">Loading submissions...</div>
+          <div className="p-16 text-center text-sm text-slate-500 flex flex-col items-center justify-center gap-3">
+            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <span>Loading submissions...</span>
+          </div>
         ) : submissions.length === 0 ? (
-          <div className="p-12 text-center text-sm text-slate-500">
-            No submissions found matching criteria.
+          <div className="p-16 text-center text-sm text-slate-500 flex flex-col items-center justify-center gap-2">
+            <div className="text-3xl">📂</div>
+            <p className="font-medium text-slate-700">No submissions found.</p>
+            <p className="text-xs text-slate-400 max-w-sm">
+              {statusFilter
+                ? `No submissions found matching filter '${statusFilter}'.`
+                : 'Upload a Python source file or repository archive, or execute the seed script to populate the dashboard.'}
+            </p>
+            {statusFilter ? (
+              <button
+                onClick={() => setStatusFilter('')}
+                className="mt-2 text-xs font-medium text-indigo-600 hover:underline"
+              >
+                Clear Filter
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowUpload(true)}
+                className="mt-3 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium hover:bg-indigo-100 transition"
+              >
+                + Create First Submission
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
