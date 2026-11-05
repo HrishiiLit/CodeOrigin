@@ -3,11 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import analysis, auth, comparisons, health, reviews, submissions
+from app.api.routes import analysis, auth, comparisons, health, integrations, reviews, submissions
 from app.core.config import settings
 from app.core.database import DatabaseManager
 from app.core.errors import register_error_handlers
 from app.core.logging import logger
+from app.repositories.submission_repository import submission_repository
 
 
 @asynccontextmanager
@@ -16,6 +17,11 @@ async def lifespan(app: FastAPI):
     logger.info("Starting CodeOrigin AI backend service...")
     DatabaseManager.connect()
     settings.resolved_upload_dir.mkdir(parents=True, exist_ok=True)
+    settings.resolved_data_dir.mkdir(parents=True, exist_ok=True)
+    # Reconcile existing uploads from disk into repository
+    reconciled = submission_repository.reconcile_untracked_files()
+    if reconciled > 0:
+        logger.info(f"Reconciled {reconciled} existing uploads into persistent storage.")
     yield
     # Shutdown: clean up database connections
     logger.info("Shutting down CodeOrigin AI backend service...")
@@ -67,6 +73,7 @@ app.include_router(submissions.router, prefix="/api/v1")
 app.include_router(analysis.router, prefix="/api/v1")
 app.include_router(comparisons.router, prefix="/api/v1")
 app.include_router(reviews.router, prefix="/api/v1")
+app.include_router(integrations.router, prefix="/api/v1")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
