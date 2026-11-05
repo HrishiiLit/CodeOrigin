@@ -100,7 +100,7 @@ export default function LoginPage() {
       </div>
 
       {/* Main Login Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div className="glass-panel rounded-2xl p-6 sm:p-8 space-y-6">
         {/* Active Role Overview Banner */}
         <div className={`p-4 rounded-xl border flex items-start gap-3.5 ${
           selectedRole === 'student'
