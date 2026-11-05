@@ -152,7 +152,38 @@ def calculate_circle_stats(radius: float):
     print(f"Generated Reports in Storage: {[f.name for f in generated_files]}")
     assert len(generated_files) > 0, "Generated report not found in storage/generated/!"
 
-    # 6. File Download & Deletion Verification
+    # 6. Phase 7: GitHub Integration & Issue Creation Verification
+    print("\n--- Testing GitHub Issue Draft & Approval Gate (Phase 7) ---")
+    draft_res = client.post(
+        "/api/v1/integrations/github/issues/draft",
+        json={
+            "submission_id": sub2_id,
+            "repository_url": "test-org/codeorigin-demo",
+            "custom_title": "Automated Review Findings for Circle Stats",
+        },
+    )
+    assert draft_res.status_code == 200
+    draft_data = draft_res.json()
+    print(f"Draft Generated: Repository={draft_data['repository']}, Title='{draft_data['title']}'")
+    assert draft_data["repository"] == "test-org/codeorigin-demo"
+    assert "CodeOrigin AI" in draft_data["body"]
+
+    # Exit Gate Check: Confirm False MUST be rejected with 400
+    gate_res = client.post(
+        "/api/v1/integrations/github/issues",
+        json={
+            "submission_id": sub2_id,
+            "repository": "test-org/codeorigin-demo",
+            "title": draft_data["title"],
+            "body": draft_data["body"],
+            "confirmed": False,
+        },
+    )
+    assert gate_res.status_code == 400
+    assert gate_res.json()["error"]["code"] == "EXPLICIT_APPROVAL_REQUIRED"
+    print("Approval Exit Gate Verified: Unconfirmed issue submission correctly rejected with 400.")
+
+    # 7. File Download & Deletion Verification
     print("\n--- Testing File Download & Deletion Lifecycle ---")
     dl_res = client.get(f"/api/v1/submissions/{sub1_id}/download")
     assert dl_res.status_code == 200
@@ -166,7 +197,7 @@ def calculate_circle_stats(radius: float):
     print("Physical file safely purged from Storage.")
 
     print("\n" + "=" * 60)
-    print("ALL INTEGRATION CHECKS PASSED WITH 100% SUCCESS!")
+    print("ALL INTEGRATION CHECKS (PHASES 1-5 & 7) PASSED WITH 100% SUCCESS!")
     print("=" * 60)
 
 if __name__ == "__main__":
