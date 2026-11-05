@@ -15,6 +15,8 @@ import {
 import { Submission, RepositoryTreeResponse, AnalysisRunResponse, Finding } from '@/types';
 import { StatusBadge } from '@/components/StatusBadge';
 import { RepositoryFileBrowser } from '@/components/RepositoryFileBrowser';
+import { GitHubIssueModal } from '@/components/GitHubIssueModal';
+import { Github, CheckSquare, Square, ExternalLink } from 'lucide-react';
 
 export default function SubmissionDetailPage() {
   const params = useParams();
@@ -35,6 +37,11 @@ export default function SubmissionDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Phase 7 — GitHub Integration State
+  const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([]);
+  const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
+  const [createdIssueInfo, setCreatedIssueInfo] = useState<{ url: string; number: number; repo: string } | null>(null);
 
   // Initial load
   useEffect(() => {
@@ -138,6 +145,21 @@ export default function SubmissionDetailPage() {
     if (filterCategory !== 'all' && f.category !== filterCategory) return false;
     return true;
   });
+
+  const toggleSelectFinding = (findingId: string) => {
+    setSelectedFindingIds((prev) =>
+      prev.includes(findingId) ? prev.filter((id) => id !== findingId) : [...prev, findingId]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    const allFilteredIds = filteredFindings.map((f) => f.finding_id);
+    setSelectedFindingIds((prev) => Array.from(new Set([...prev, ...allFilteredIds])));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedFindingIds([]);
+  };
 
   return (
     <div className="space-y-6">
@@ -321,6 +343,61 @@ export default function SubmissionDetailPage() {
               <span className="ml-auto text-slate-400">Duration: {analysis.duration_ms}ms</span>
             </div>
 
+            {/* GitHub Issue Created Banner */}
+            {createdIssueInfo && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-4 text-xs text-emerald-900">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">✓ GitHub Issue Created:</span>
+                  <span>Issue #{createdIssueInfo.number} in <code className="font-mono">{createdIssueInfo.repo}</code></span>
+                </div>
+                <a
+                  href={createdIssueInfo.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-medium transition"
+                >
+                  View on GitHub
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            )}
+
+            {/* Selection & GitHub Export Action Bar */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAllFiltered}
+                  className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 rounded text-slate-700 font-medium transition"
+                >
+                  Select All Filtered ({filteredFindings.length})
+                </button>
+                {selectedFindingIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDeselectAll}
+                    className="px-2.5 py-1 text-slate-500 hover:text-slate-800 transition"
+                  >
+                    Clear ({selectedFindingIds.length})
+                  </button>
+                )}
+                <span className="text-slate-400">|</span>
+                <span className="text-slate-600 font-medium">
+                  {selectedFindingIds.length} finding{selectedFindingIds.length === 1 ? '' : 's'} selected
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsGitHubModalOpen(true)}
+                disabled={selectedFindingIds.length === 0}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-lg font-semibold transition shadow-xs"
+              >
+                <Github className="w-4 h-4" />
+                Export to GitHub Issue (Phase 7)
+              </button>
+            </div>
+
             {/* Filter Tabs */}
             <div className="flex items-center justify-between gap-4 flex-wrap border-b border-slate-200 pb-2">
               <div className="flex items-center gap-1">
@@ -369,7 +446,14 @@ export default function SubmissionDetailPage() {
                     className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition shadow-xs space-y-2"
                   >
                     <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selectedFindingIds.includes(f.finding_id)}
+                          onChange={() => toggleSelectFinding(f.finding_id)}
+                          className="rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 w-3.5 h-3.5 cursor-pointer"
+                          aria-label={`Select finding ${f.rule_id}`}
+                        />
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                           f.severity === 'error'
                             ? 'bg-rose-100 text-rose-800 border border-rose-200'
@@ -417,6 +501,20 @@ export default function SubmissionDetailPage() {
         )}
       </div>
 
+      {/* Phase 7 GitHub Issue Modal */}
+      <GitHubIssueModal
+        isOpen={isGitHubModalOpen}
+        onClose={() => setIsGitHubModalOpen(false)}
+        submissionId={submissionId}
+        selectedFindingIds={selectedFindingIds}
+        onSuccess={(issue) => {
+          setCreatedIssueInfo({
+            url: issue.issue_url,
+            number: issue.issue_number,
+            repo: issue.repository,
+          });
+        }}
+      />
     </div>
   );
 }

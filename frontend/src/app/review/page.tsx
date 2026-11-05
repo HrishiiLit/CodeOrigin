@@ -7,7 +7,8 @@ import { Submission, Review, ReviewReportResponse } from '@/types';
 import { StatusBadge } from '@/components/StatusBadge';
 
 import { useAuth } from '@/context/AuthContext';
-import { BookOpen, ShieldAlert, Repeat } from 'lucide-react';
+import { BookOpen, ShieldAlert, Repeat, Github } from 'lucide-react';
+import { GitHubIssueModal } from '@/components/GitHubIssueModal';
 
 export default function ReviewPage() {
   const { user, role, switchRole } = useAuth();
@@ -21,6 +22,7 @@ export default function ReviewPage() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [generatingReport, setGeneratingReport] = useState<boolean>(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.name) {
@@ -198,6 +200,13 @@ export default function ReviewPage() {
                   >
                     {generatingReport ? 'Generating Report…' : 'Generate Full Report'}
                   </button>
+                  <button
+                    onClick={() => setIsGitHubModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-medium hover:bg-slate-800 transition shadow-sm"
+                  >
+                    <Github className="w-3.5 h-3.5" />
+                    Export GitHub Issue
+                  </button>
                 </div>
               </div>
 
@@ -306,6 +315,19 @@ export default function ReviewPage() {
           )}
         </div>
       </div>
+
+      {/* Phase 7 GitHub Issue Modal */}
+      {selectedSubId && (
+        <GitHubIssueModal
+          isOpen={isGitHubModalOpen}
+          onClose={() => setIsGitHubModalOpen(false)}
+          submissionId={selectedSubId}
+          selectedFindingIds={[]}
+          onSuccess={(issue) => {
+            setStatusMsg(`✓ GitHub Issue #${issue.issue_number} successfully posted to ${issue.repository}.`);
+          }}
+        />
+      )}
     </div>
   );
 }
