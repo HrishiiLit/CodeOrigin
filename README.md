@@ -67,8 +67,39 @@ Services:
 
 ---
 
-## 5. Documentation
+## 5. Live Demonstration & Demo Seeder
+
+To instantly populate the system with standardized student submissions, multi-tool static analysis, revision comparisons, and faculty review notes:
+
+```bash
+# Automated one-click demo data seeder
+python backend/scripts/seed_demo.py
+```
+
+For the comprehensive 10-step evaluator walkthrough and narrative talking points, see the **[Demonstration Runbook](docs/DEMO_RUNBOOK.md)**.
+
+---
+
+## 6. Testing & Quality Verification
+
+```bash
+# Run comprehensive backend test suite (unit, integration & security hardening)
+backend/.venv/Scripts/python -m pytest backend/tests -v
+
+# Run end-to-end live workflow verification
+backend/.venv/Scripts/python backend/test_live_workflow.py
+
+# Verify frontend production build
+npm --prefix frontend run build
+```
+
+---
+
+## 7. Documentation
 - [Implementation Plan](docs/CodeOrigin_AI_Implementation_Plan.md)
+- [Demonstration Runbook](docs/DEMO_RUNBOOK.md)
+- [Deployment & Rollback Guide](docs/DEPLOYMENT_AND_ROLLBACK.md)
+- [Integration Log](docs/INTEGRATION_LOG.md)
 - [API Contract](docs/API_CONTRACT.md)
 - [Data Model & Persistence](docs/DATA_MODEL.md)
 - [Architecture Decision Records](docs/DECISIONS.md)
