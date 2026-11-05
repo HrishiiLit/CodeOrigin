@@ -145,9 +145,12 @@ def download_submission(
 
     file_path = storage_service.get_file_path(storage_key, relative_file_path=path)
     if file_path.is_file():
+        dl_name = path or sub_doc.get("original_filename") or file_path.name
+        if "/" in dl_name or "\\" in dl_name:
+            dl_name = dl_name.replace("\\", "/").split("/")[-1]
         return FileResponse(
             path=str(file_path),
-            filename=file_path.name,
+            filename=dl_name,
             media_type="application/octet-stream",
         )
     elif file_path.is_dir():

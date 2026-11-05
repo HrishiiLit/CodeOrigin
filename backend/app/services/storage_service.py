@@ -72,6 +72,17 @@ class StorageService:
         self.processed_dir.mkdir(parents=True, exist_ok=True)
         self.generated_dir.mkdir(parents=True, exist_ok=True)
 
+    def _get_effective_root(self, base_path: Path) -> Path:
+        """
+        If base_path is a directory and has exactly one non-ignored directory child,
+        returns that child as the effective root (common for extracted ZIPs/tarballs).
+        """
+        if base_path.is_dir():
+            children = [c for c in base_path.iterdir() if c.is_dir() and c.name not in IGNORED_DIRECTORIES]
+            if len(children) == 1:
+                return children[0]
+        return base_path
+
     def _resolve_safe_path(self, storage_key: str) -> Path:
         """
         Resolves the file path and verifies that it is strictly contained
@@ -79,7 +90,7 @@ class StorageService:
         Supports both direct subpaths ('uploads/...', 'processed/...', 'generated/...')
         and legacy flat keys ('...py', 'repo_...').
         """
-        if ".." in storage_key or storage_key.startswith("/") or storage_key.startswith("\\"):
+        if ".." in storage_key:
             raise StorageSecurityError("Illegal characters detected in storage key.")
 
         clean_key = storage_key.replace("\\", "/").lstrip("/")
@@ -96,9 +107,17 @@ class StorageService:
             elif (self.generated_dir / clean_key).exists():
                 target_path = (self.generated_dir / clean_key).resolve()
 
+        # Fallback: check if file was temporarily stored in backend/storage during legacy split
+        if not target_path.exists():
+            alt_backend = (self.base_dir.parent / "backend" / "storage" / clean_key).resolve()
+            if alt_backend.exists():
+                target_path = alt_backend
+
         try:
             if not target_path.is_relative_to(self.base_dir):
-                raise StorageSecurityError("Target file path escapes the configured upload root.")
+                alt_base = (self.base_dir.parent / "backend" / "storage").resolve()
+                if not (alt_base.exists() and target_path.is_relative_to(alt_base)):
+                    raise StorageSecurityError("Target file path escapes the configured upload root.")
         except AttributeError:
             if not str(target_path).startswith(str(self.base_dir)):
                 raise StorageSecurityError("Target file path escapes the configured upload root.")
@@ -219,7 +238,7 @@ class StorageService:
                         count += 1
         return count
 
-    def scan_repository_tree(self, storage_key: str) -> Dict[str, Any]:
+    def scan_repository_tree(self, storage_key: str, original_filename: Optional[str] = None) -> Dict[str, Any]:
         """
         Recursively scans the directory or single file associated with storage_key.
         Returns a tree hierarchy and a flat list of source files.
@@ -230,16 +249,17 @@ class StorageService:
 
         if base_path.is_file():
             stats = base_path.stat()
+            display_name = original_filename or base_path.name
             file_entry = {
-                "path": base_path.name,
-                "name": base_path.name,
+                "path": display_name,
+                "name": display_name,
                 "size_bytes": stats.st_size,
-                "extension": base_path.suffix.lower(),
-                "is_source": base_path.suffix.lower() == ".py",
+                "extension": Path(display_name).suffix.lower(),
+                "is_source": Path(display_name).suffix.lower() == ".py",
             }
             return {
                 "is_directory": False,
-                "root_name": base_path.name,
+                "root_name": display_name,
                 "total_files": 1,
                 "source_files_count": 1 if file_entry["is_source"] else 0,
                 "tree": [file_entry],
@@ -250,10 +270,7 @@ class StorageService:
         source_files: List[str] = []
         total_files = 0
 
-        effective_root = base_path
-        children = [c for c in base_path.iterdir() if c.name not in IGNORED_DIRECTORIES]
-        if len(children) == 1 and children[0].is_dir():
-            effective_root = children[0]
+        effective_root = self._get_effective_root(base_path)
 
         for root, dirs, files in os.walk(effective_root):
             dirs[:] = [d for d in dirs if d not in IGNORED_DIRECTORIES and not d.startswith(".")]
@@ -304,6 +321,8 @@ class StorageService:
 
         target_file = base_path
         if base_path.is_dir():
+            effective_root = self._get_effective_root(base_path)
+
             if not relative_file_path:
                 tree_info = self.scan_repository_tree(storage_key)
                 if tree_info["source_files"]:
@@ -315,13 +334,16 @@ class StorageService:
             if ".." in clean_rel:
                 raise StorageSecurityError("Relative file path traversal detected.")
             
-            target_file = (base_path / clean_rel).resolve()
-            if not target_file.is_file():
-                children = [c for c in base_path.iterdir() if c.is_dir() and c.name not in IGNORED_DIRECTORIES]
-                if children:
-                    alt_target = (children[0] / clean_rel).resolve()
-                    if alt_target.is_file():
-                        target_file = alt_target
+            # Check effective root first
+            candidate = (effective_root / clean_rel).resolve()
+            if candidate.is_file():
+                target_file = candidate
+            else:
+                candidate_base = (base_path / clean_rel).resolve()
+                if candidate_base.is_file():
+                    target_file = candidate_base
+                else:
+                    target_file = candidate
 
         if not target_file.is_file():
             raise ResourceNotFoundError(resource_type="Source file", resource_id=str(relative_file_path or storage_key))
@@ -348,14 +370,14 @@ class StorageService:
             clean_rel = relative_file_path.replace("\\", "/").lstrip("/")
             if ".." in clean_rel:
                 raise StorageSecurityError("Relative file path traversal detected.")
-            target_file = (base_path / clean_rel).resolve()
-            if target_file.is_file():
-                return target_file
-            children = [c for c in base_path.iterdir() if c.is_dir() and c.name not in IGNORED_DIRECTORIES]
-            if children:
-                alt_target = (children[0] / clean_rel).resolve()
-                if alt_target.is_file():
-                    return alt_target
+            
+            effective_root = self._get_effective_root(base_path)
+            candidate = (effective_root / clean_rel).resolve()
+            if candidate.is_file():
+                return candidate
+            candidate_base = (base_path / clean_rel).resolve()
+            if candidate_base.is_file():
+                return candidate_base
 
         return base_path
 

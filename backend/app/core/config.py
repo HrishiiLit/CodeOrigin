@@ -7,22 +7,23 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 def find_project_root() -> Path:
     """
     Locates the project root directory regardless of current working directory.
-    Climbs parent directories looking for markers like docker-compose.yml, .git, or storage.
+    Climbs parent directories looking for markers like backend+frontend or docker-compose.yml.
     """
-    current = Path(__file__).resolve().parent
-    for parent in [current] + list(current.parents):
-        if (parent / "docker-compose.yml").exists() or (parent / ".git").exists():
-            return parent
-        if (parent / "backend").exists() and (parent / "frontend").exists():
-            return parent
-        if (parent / "storage").is_dir() or (parent / "Storage").is_dir():
-            return parent
-
     if (Path("/app") / "app").exists():
         return Path("/app")
 
+    current = Path(__file__).resolve().parent
+    for parent in [current] + list(current.parents):
+        # The true repository root has both backend and frontend directories
+        if (parent / "backend").is_dir() and (parent / "frontend").is_dir():
+            return parent
+        if (parent / "docker-compose.yml").is_file():
+            return parent
+        if (parent / ".git").is_dir() or (parent / ".git").is_file():
+            return parent
+
     try:
-        return Path(__file__).resolve().parents[3]
+        return Path(__file__).resolve().parents[2]
     except IndexError:
         return Path.cwd()
 
@@ -70,15 +71,15 @@ class Settings(BaseSettings):
 
     @property
     def resolved_storage_dir(self) -> Path:
-        # Check if an explicit absolute UPLOAD_DIR or STORAGE_DIR was passed (e.g. pytest tempdir)
-        if Path(self.UPLOAD_DIR).is_absolute():
-            base = Path(self.UPLOAD_DIR).resolve()
-            base.mkdir(parents=True, exist_ok=True)
-            return base
-
-        raw_storage = self.STORAGE_DIR
-        if Path(raw_storage).is_absolute():
-            base = Path(raw_storage).resolve()
+        # Check if an explicit absolute STORAGE_DIR or UPLOAD_DIR was passed (e.g. pytest tempdir or container)
+        if Path(self.STORAGE_DIR).is_absolute():
+            base = Path(self.STORAGE_DIR).resolve()
+        elif Path(self.UPLOAD_DIR).is_absolute():
+            upload_path = Path(self.UPLOAD_DIR).resolve()
+            if upload_path.name.lower() in {"uploads", "upload"}:
+                base = upload_path.parent
+            else:
+                base = upload_path
         else:
             root = self.project_root
             if (root / "Storage").is_dir():

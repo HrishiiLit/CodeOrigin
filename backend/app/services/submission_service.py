@@ -67,7 +67,7 @@ class SubmissionService:
             sub_type = SubmissionType.FILE
 
         # 5. Scan repository tree
-        tree_info = self.storage.scan_repository_tree(storage_key)
+        tree_info = self.storage.scan_repository_tree(storage_key, original_filename=safe_display_filename)
 
         # 6. Build submission document
         submission_doc = {
@@ -131,7 +131,8 @@ class SubmissionService:
         if not storage_key:
             raise ResourceNotFoundError(resource_type="Submission file key", resource_id=submission_id)
 
-        info = self.storage.scan_repository_tree(storage_key)
+        orig_name = doc.get("original_filename")
+        info = self.storage.scan_repository_tree(storage_key, original_filename=orig_name)
         return RepositoryTreeResponse(
             is_directory=info["is_directory"],
             root_name=info["root_name"],
