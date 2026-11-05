@@ -155,7 +155,7 @@ export interface ReviewReportResponse {
 }
 
 // Authentication & Roles
-export type UserRole = 'student' | 'faculty';
+export type UserRole = 'student' | 'faculty' | 'admin';
 
 export interface UserProfile {
   user_id: string;
@@ -178,7 +178,7 @@ export interface AuthResponse {
   user: UserProfile;
 }
 
-// Phase 7 — GitHub Integration
+// GitHub Integration
 export interface IssueDraftRequest {
   submission_id: string;
   finding_ids?: string[];
@@ -214,6 +214,61 @@ export interface CreateIssueResponse {
   created_at: string;
   actor_id: string;
   status: string;
+}
+
+// Admin & Governance Stats
+export interface SubmissionsStats {
+  total: number;
+  files: number;
+  repositories: number;
+  by_status: Record<string, number>;
+  total_storage_bytes: number;
+  unique_students: number;
+  unique_projects: number;
+}
+
+export interface AnalysisStats {
+  total_runs: number;
+  total_findings: number;
+  by_severity: Record<string, number>;
+  by_tool: Record<string, number>;
+  by_category: Record<string, number>;
+  avg_duration_ms: number;
+}
+
+export interface ReviewStats {
+  total_reviews: number;
+  unique_reviewers: number;
+}
+
+export interface ComparisonStats {
+  total_comparisons: number;
+  total_added_lines: number;
+  total_removed_lines: number;
+}
+
+export interface SystemStats {
+  api: string;
+  database: string;
+  version: string;
+  timestamp: string;
+}
+
+export interface AuditEventItem {
+  event_id: string;
+  action: string;
+  actor_id: string;
+  details: Record<string, any>;
+  created_at: string;
+}
+
+export interface AdminOverviewResponse {
+  submissions: SubmissionsStats;
+  analysis: AnalysisStats;
+  reviews: ReviewStats;
+  comparisons: ComparisonStats;
+  system: SystemStats;
+  recent_activity: AuditEventItem[];
 }
 
 

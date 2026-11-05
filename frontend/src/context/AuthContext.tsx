@@ -29,6 +29,20 @@ export const DEFAULT_FACULTY: UserProfile = {
   department: 'Computer Science & Engineering',
 };
 
+export const DEFAULT_ADMIN: UserProfile = {
+  user_id: 'admin-root',
+  name: 'Dean Dr. Eleanor Cross',
+  email: 'dean.cross@university.edu',
+  role: 'admin',
+  department: 'Academic Affairs & Computing Governance',
+};
+
+const getFallbackUser = (targetRole: UserRole): UserProfile => {
+  if (targetRole === 'admin') return DEFAULT_ADMIN;
+  if (targetRole === 'faculty') return DEFAULT_FACULTY;
+  return DEFAULT_STUDENT;
+};
+
 const AuthContext = createContext<AuthContextType>({
   user: DEFAULT_STUDENT,
   role: 'student',
@@ -60,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('codeorigin_token', res.access_token);
       return res.user;
     } catch {
-      const fallbackUser = role === 'faculty' ? DEFAULT_FACULTY : DEFAULT_STUDENT;
+      const fallbackUser = getFallbackUser(role);
       setUser(fallbackUser);
       localStorage.setItem('codeorigin_user', JSON.stringify(fallbackUser));
       return fallbackUser;
@@ -68,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const switchRole = (newRole: UserRole) => {
-    const newUser = newRole === 'faculty' ? DEFAULT_FACULTY : DEFAULT_STUDENT;
+    const newUser = getFallbackUser(newRole);
     setUser(newUser);
     try {
       localStorage.setItem('codeorigin_user', JSON.stringify(newUser));

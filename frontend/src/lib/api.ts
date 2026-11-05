@@ -18,6 +18,8 @@ import {
   IssueDraftResponse,
   CreateIssueRequest,
   CreateIssueResponse,
+  AdminOverviewResponse,
+  AuditEventItem,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -249,7 +251,7 @@ export async function getDemoUsers(): Promise<UserProfile[]> {
   return handleResponse<UserProfile[]>(res);
 }
 
-/** Phase 7 — GitHub Integration */
+/** GitHub Integration */
 export async function prepareIssueDraft(payload: IssueDraftRequest): Promise<IssueDraftResponse> {
   const res = await fetch(`${API_BASE_URL}/api/v1/integrations/github/issues/draft`, {
     method: 'POST',
@@ -273,6 +275,22 @@ export async function createGitHubIssue(
     body: JSON.stringify(payload),
   });
   return handleResponse<CreateIssueResponse>(res);
+}
+
+/** Administration & System Governance */
+export async function getAdminStats(role: string = 'admin'): Promise<AdminOverviewResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/admin/stats`, {
+    cache: 'no-store',
+    headers: { 'X-User-Role': role },
+  });
+  return handleResponse<AdminOverviewResponse>(res);
+}
+
+export async function getAuditLogs(limit: number = 50): Promise<AuditEventItem[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/admin/audit-logs?limit=${limit}`, {
+    cache: 'no-store',
+  });
+  return handleResponse<AuditEventItem[]>(res);
 }
 
 

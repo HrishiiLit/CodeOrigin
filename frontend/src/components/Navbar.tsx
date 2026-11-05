@@ -18,6 +18,8 @@ import {
   GitCompare,
   CheckSquare2,
   LayoutDashboard,
+  BarChart3,
+  Shield,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -30,6 +32,7 @@ export const Navbar: React.FC = () => {
     { href: '/submissions', label: 'Submissions', icon: FileCode2 },
     { href: '/compare', label: 'Compare', icon: GitCompare },
     { href: '/review', label: 'Faculty Review', icon: CheckSquare2 },
+    { href: '/admin', label: 'Admin Stats', icon: BarChart3 },
   ];
 
   return (
@@ -91,13 +94,17 @@ export const Navbar: React.FC = () => {
               <Link
                 href="/login"
                 className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border shadow-2xs transition-all hover:scale-102 ${
-                  role === 'faculty'
+                  role === 'admin'
+                    ? 'bg-amber-50/80 border-amber-200 text-amber-900 hover:bg-amber-100/80'
+                    : role === 'faculty'
                     ? 'bg-purple-50/80 border-purple-200 text-purple-800 hover:bg-purple-100/80'
                     : 'bg-indigo-50/80 border-indigo-200 text-indigo-800 hover:bg-indigo-100/80'
                 }`}
                 title="Account Settings / Role Profile"
               >
-                {role === 'faculty' ? (
+                {role === 'admin' ? (
+                  <Shield className="w-3.5 h-3.5 text-amber-600" />
+                ) : role === 'faculty' ? (
                   <BookOpen className="w-3.5 h-3.5 text-purple-600" />
                 ) : (
                   <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
@@ -111,9 +118,12 @@ export const Navbar: React.FC = () => {
               {/* Quick Role Switcher */}
               <button
                 type="button"
-                onClick={() => switchRole(role === 'student' ? 'faculty' : 'student')}
+                onClick={() => {
+                  const nextRole = role === 'student' ? 'faculty' : role === 'faculty' ? 'admin' : 'student';
+                  switchRole(nextRole);
+                }}
                 className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/80 rounded-lg transition border border-transparent hover:border-indigo-100"
-                title={`Switch to ${role === 'student' ? 'Faculty' : 'Student'} mode`}
+                title={`Cycle role (currently: ${role})`}
               >
                 <Repeat className="w-4 h-4" />
               </button>

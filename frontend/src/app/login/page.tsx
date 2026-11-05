@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth, DEFAULT_STUDENT, DEFAULT_FACULTY } from '@/context/AuthContext';
+import { useAuth, DEFAULT_STUDENT, DEFAULT_FACULTY, DEFAULT_ADMIN } from '@/context/AuthContext';
 import { UserRole } from '@/types';
-import { GraduationCap, BookOpen, ArrowRight, ShieldCheck } from 'lucide-react';
+import { GraduationCap, BookOpen, ArrowRight, ShieldCheck, Shield } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, user } = useAuth();
@@ -19,8 +19,10 @@ export default function LoginPage() {
     setError(null);
     if (role === 'student') {
       setUsername('student-alex');
-    } else {
+    } else if (role === 'faculty') {
       setUsername('prof-evaluation');
+    } else {
+      setUsername('admin-root');
     }
   };
 
@@ -35,8 +37,13 @@ export default function LoginPage() {
     setError(null);
     try {
       await login(selectedRole, username.trim());
-      // Student opens Dashboard (/), Faculty opens Review (/review)
-      window.location.href = selectedRole === 'faculty' ? '/review' : '/';
+      if (selectedRole === 'admin') {
+        window.location.href = '/admin';
+      } else if (selectedRole === 'faculty') {
+        window.location.href = '/review';
+      } else {
+        window.location.href = '/';
+      }
     } catch (err: any) {
       setError(err?.message || 'Login failed. Please check credentials.');
       setIsLoading(false);
@@ -47,9 +54,20 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const targetUser = role === 'faculty' ? DEFAULT_FACULTY.user_id : DEFAULT_STUDENT.user_id;
+      const targetUser =
+        role === 'admin'
+          ? DEFAULT_ADMIN.user_id
+          : role === 'faculty'
+          ? DEFAULT_FACULTY.user_id
+          : DEFAULT_STUDENT.user_id;
       await login(role, targetUser);
-      window.location.href = role === 'faculty' ? '/review' : '/';
+      if (role === 'admin') {
+        window.location.href = '/admin';
+      } else if (role === 'faculty') {
+        window.location.href = '/review';
+      } else {
+        window.location.href = '/';
+      }
     } catch (err: any) {
       setError(err?.message || 'Login failed.');
       setIsLoading(false);
@@ -57,45 +75,57 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto py-8 space-y-6 animate-fadeIn">
+    <div className="max-w-2xl mx-auto py-8 space-y-6 animate-fadeIn">
       {/* Page Header */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full text-xs font-semibold uppercase tracking-wider">
           <ShieldCheck className="w-3.5 h-3.5" /> Institutional Portal
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
           Sign In to CodeOrigin AI
         </h1>
-        <p className="text-sm text-slate-500 max-w-md mx-auto">
-          Choose your university role to access specialized workspaces for student assignment submission or faculty evaluation.
+        <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
+          Choose your university role to access specialized workspaces for student assignment submissions, faculty evaluations, or academic administration.
         </p>
       </div>
 
       {/* Role Switcher Tabs */}
-      <div className="grid grid-cols-2 p-1.5 bg-slate-200/80 rounded-2xl gap-2 shadow-inner">
+      <div className="grid grid-cols-3 p-1.5 bg-slate-200/80 rounded-2xl gap-2 shadow-inner">
         <button
           type="button"
           onClick={() => handleRoleSelect('student')}
-          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
             selectedRole === 'student'
               ? 'bg-white text-indigo-700 shadow-md ring-1 ring-black/5'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <GraduationCap className={`w-4 h-4 ${selectedRole === 'student' ? 'text-indigo-600' : 'text-slate-400'}`} />
-          Student Portal
+          Student
         </button>
         <button
           type="button"
           onClick={() => handleRoleSelect('faculty')}
-          className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
             selectedRole === 'faculty'
               ? 'bg-white text-purple-700 shadow-md ring-1 ring-black/5'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <BookOpen className={`w-4 h-4 ${selectedRole === 'faculty' ? 'text-purple-600' : 'text-slate-400'}`} />
-          Faculty / Reviewer
+          Faculty
+        </button>
+        <button
+          type="button"
+          onClick={() => handleRoleSelect('admin')}
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            selectedRole === 'admin'
+              ? 'bg-white text-amber-800 shadow-md ring-1 ring-black/5'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Shield className={`w-4 h-4 ${selectedRole === 'admin' ? 'text-amber-600' : 'text-slate-400'}`} />
+          Dean / Admin
         </button>
       </div>
 
@@ -103,23 +133,39 @@ export default function LoginPage() {
       <div className="glass-panel rounded-2xl p-6 sm:p-8 space-y-6">
         {/* Active Role Overview Banner */}
         <div className={`p-4 rounded-xl border flex items-start gap-3.5 ${
-          selectedRole === 'student'
-            ? 'bg-indigo-50/60 border-indigo-100 text-indigo-900'
-            : 'bg-purple-50/60 border-purple-100 text-purple-900'
+          selectedRole === 'admin'
+            ? 'bg-amber-50/70 border-amber-200/80 text-amber-950'
+            : selectedRole === 'faculty'
+            ? 'bg-purple-50/70 border-purple-200/80 text-purple-950'
+            : 'bg-indigo-50/70 border-indigo-200/80 text-indigo-950'
         }`}>
-          {selectedRole === 'student' ? (
-            <GraduationCap className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
-          ) : (
+          {selectedRole === 'admin' ? (
+            <Shield className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+          ) : selectedRole === 'faculty' ? (
             <BookOpen className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
+          ) : (
+            <GraduationCap className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
           )}
           <div className="text-xs space-y-1">
             <span className="font-semibold text-sm">
-              {selectedRole === 'student' ? 'Student Workspace' : 'Faculty & Instructor Workspace'}
+              {selectedRole === 'admin'
+                ? 'Academic Administration & Institutional Oversight'
+                : selectedRole === 'faculty'
+                ? 'Faculty & Instructor Evaluation Workspace'
+                : 'Student Assignment Workspace'}
             </span>
-            <p className={selectedRole === 'student' ? 'text-indigo-700' : 'text-purple-700'}>
-              {selectedRole === 'student'
-                ? 'Upload assignments (.py & archives), run automated static analyzers, and inspect revision diffs.'
-                : 'Review student submissions, attach qualitative feedback and rubric scoring, and generate formal audit reports.'}
+            <p className={
+              selectedRole === 'admin'
+                ? 'text-amber-800'
+                : selectedRole === 'faculty'
+                ? 'text-purple-800'
+                : 'text-indigo-800'
+            }>
+              {selectedRole === 'admin'
+                ? 'Inspect overall institution telemetry, static analysis distribution, faculty evaluation ratios, and immutable audit logs.'
+                : selectedRole === 'faculty'
+                ? 'Review student submissions, attach qualitative feedback and rubric scoring, and generate formal audit reports.'
+                : 'Upload assignments (.py & archives), run automated static analyzers, and inspect revision diffs.'}
             </p>
           </div>
         </div>
@@ -135,13 +181,23 @@ export default function LoginPage() {
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              {selectedRole === 'student' ? 'Student Username or ID' : 'Faculty Username / Staff ID'}
+              {selectedRole === 'admin'
+                ? 'Administrator ID / Dean Username'
+                : selectedRole === 'faculty'
+                ? 'Faculty Username / Staff ID'
+                : 'Student Username or ID'}
             </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder={selectedRole === 'student' ? 'e.g. student-alex' : 'e.g. prof-evaluation'}
+              placeholder={
+                selectedRole === 'admin'
+                  ? 'e.g. admin-root'
+                  : selectedRole === 'faculty'
+                  ? 'e.g. prof-evaluation'
+                  : 'e.g. student-alex'
+              }
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
               required
             />
@@ -163,13 +219,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-2.5 px-4 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2 shadow-sm transition ${
-              selectedRole === 'student'
-                ? 'bg-indigo-600 hover:bg-indigo-700'
-                : 'bg-purple-600 hover:bg-purple-700'
+            className={`w-full py-2.5 px-4 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition ${
+              selectedRole === 'admin'
+                ? 'bg-amber-700 hover:bg-amber-800'
+                : selectedRole === 'faculty'
+                ? 'bg-purple-600 hover:bg-purple-700'
+                : 'bg-indigo-600 hover:bg-indigo-700'
             } disabled:opacity-50`}
           >
-            {isLoading ? 'Opening Portal...' : `Sign In as ${selectedRole === 'student' ? 'Student' : 'Faculty'}`}
+            {isLoading ? 'Opening Portal...' : `Sign In as ${selectedRole.toUpperCase()}`}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
@@ -181,25 +239,25 @@ export default function LoginPage() {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-white px-3 text-slate-400 font-medium tracking-wider">
-              Or 1-Click Demo Sign In
+              Or 1-Click Demo Profiles
             </span>
           </div>
         </div>
 
         {/* 1-Click Presets */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button
             type="button"
             disabled={isLoading}
             onClick={() => handleQuickLogin('student')}
-            className="flex items-center gap-3 p-3 text-left border border-indigo-200/80 bg-indigo-50/40 hover:bg-indigo-50 rounded-xl transition group disabled:opacity-50"
+            className="flex items-center gap-2.5 p-3 text-left border border-indigo-200/80 bg-indigo-50/40 hover:bg-indigo-50 rounded-xl transition group disabled:opacity-50"
           >
             <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-105 transition-transform">
               <GraduationCap className="w-4 h-4" />
             </div>
-            <div>
-              <div className="text-xs font-semibold text-slate-900">Alex Chen (Student)</div>
-              <div className="text-[11px] text-slate-500">ID: STU-2026-0814</div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-900 truncate">Alex Chen</div>
+              <div className="text-[10px] text-slate-500">Student</div>
             </div>
           </button>
 
@@ -207,14 +265,29 @@ export default function LoginPage() {
             type="button"
             disabled={isLoading}
             onClick={() => handleQuickLogin('faculty')}
-            className="flex items-center gap-3 p-3 text-left border border-purple-200/80 bg-purple-50/40 hover:bg-purple-50 rounded-xl transition group disabled:opacity-50"
+            className="flex items-center gap-2.5 p-3 text-left border border-purple-200/80 bg-purple-50/40 hover:bg-purple-50 rounded-xl transition group disabled:opacity-50"
           >
             <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 shrink-0 group-hover:scale-105 transition-transform">
               <BookOpen className="w-4 h-4" />
             </div>
-            <div>
-              <div className="text-xs font-semibold text-slate-900">Prof. Marcus Vance</div>
-              <div className="text-[11px] text-slate-500">Dept: Computer Science</div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-900 truncate">Prof. Marcus Vance</div>
+              <div className="text-[10px] text-slate-500">Faculty Reviewer</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => handleQuickLogin('admin')}
+            className="flex items-center gap-2.5 p-3 text-left border border-amber-200/80 bg-amber-50/40 hover:bg-amber-50 rounded-xl transition group disabled:opacity-50"
+          >
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 group-hover:scale-105 transition-transform">
+              <Shield className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-900 truncate">Dean Eleanor Cross</div>
+              <div className="text-[10px] text-slate-500">Administrator</div>
             </div>
           </button>
         </div>
