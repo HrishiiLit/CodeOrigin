@@ -210,3 +210,179 @@ Tracks critical security actions and integrations.
   "created_at": "2026-10-30T18:45:00Z"
 }
 ```
+
+---
+
+## 3. Version 2 (V2) Collections — Automated Evaluation & Authenticity Bot
+
+### 3.1 `code_fingerprints` (Token Winnowing Inverted Index)
+Stores structural k-gram hashes generated via Karp-Rabin winnowing for rapid $O(1)$ inverted index lookup across an entire university cohort.
+
+```json
+{
+  "_id": "uuid-v4",
+  "submission_id": "uuid-submission",
+  "project_id": "uuid-project",
+  "file_path": "src/engine.py",
+  "hash_value": 3849182910,
+  "token_span": [42, 67],
+  "created_at": "2026-11-06T00:00:00Z"
+}
+```
+
+**Indexes:**
+- `{"hash_value": 1, "project_id": 1}` (High-speed inverted index lookup)
+- `{"submission_id": 1}`
+
+---
+
+### 3.2 `cohort_evaluations` (Division Similarity Matrix)
+Stores the batch evaluation matrix, pairwise token containment scores, and collusion clusters across an assignment or university division.
+
+```json
+{
+  "_id": "uuid-v4",
+  "project_id": "uuid-project",
+  "total_submissions_compared": 48,
+  "status": "completed",
+  "collusion_clusters": [
+    {
+      "cluster_id": "cluster-1",
+      "members": ["student-alex", "student-bob"],
+      "similarity_score": 0.89,
+      "matched_blocks": [
+        {
+          "submission_a": "sub-1",
+          "file_a": "engine.py",
+          "lines_a": [42, 115],
+          "submission_b": "sub-2",
+          "file_b": "core_engine.py",
+          "lines_b": [38, 111],
+          "tokens_shared": 340
+        }
+      ]
+    }
+  ],
+  "matrix_summary": [
+    {"sub_a": "sub-1", "sub_b": "sub-2", "score": 0.89}
+  ],
+  "evaluated_at": "2026-11-06T00:05:00Z"
+}
+```
+
+**Indexes:**
+- `{"project_id": 1, "evaluated_at": -1}`
+
+---
+
+### 3.3 `authenticity_audits` (Open-Source Clone & Git Forensics)
+Stores Software Heritage hash verification, distinctive GitHub code anchor matches, and Git commit graph timeline metrics.
+
+```json
+{
+  "_id": "uuid-v4",
+  "submission_id": "uuid-submission",
+  "authenticity_rating": "SUSPICIOUS",
+  "confidence_score": 0.88,
+  "software_heritage_matches": [
+    {
+      "file_path": "core/alloc.py",
+      "sha1": "356a192b7913b04c54574d18c28d46e6395428ab",
+      "first_seen": "2021-04-12T10:00:00Z",
+      "upstream_url": "https://github.com/original-author/distributed-cache"
+    }
+  ],
+  "distinctive_anchors_matched": [
+    {
+      "anchor_literal": "Invalid dimension stride configuration encountered in buffer allocator",
+      "github_repo": "https://github.com/original-author/distributed-cache"
+    }
+  ],
+  "git_forensics": {
+    "total_commits": 2,
+    "lines_added": 4820,
+    "lines_deleted": 12,
+    "churn_ratio": 0.002,
+    "branch_count": 1,
+    "has_feature_branches": false,
+    "flags": ["ATOMIC_BULK_DUMP", "ZERO_CHURN"]
+  },
+  "created_at": "2026-11-06T00:00:00Z"
+}
+```
+
+**Indexes:**
+- `{"submission_id": 1}`
+- `{"authenticity_rating": 1}`
+
+---
+
+### 3.4 `ai_evaluations` (Multi-Signal Heuristics & RAG Rubric Grading)
+Stores stylometry markers, prompt leak indicators, token perplexity stats, and rubric-based evaluation scores from Hugging Face models.
+
+```json
+{
+  "_id": "uuid-v4",
+  "submission_id": "uuid-submission",
+  "ai_risk_score": 0.82,
+  "risk_level": "HIGH",
+  "signals": {
+    "stylometry": {
+      "pedantic_comment_density": 0.38,
+      "over_engineered_docstring_count": 8
+    },
+    "prompt_artifacts": {
+      "leaked_markdown_tokens": 1
+    },
+    "perplexity": {
+      "average_token_entropy": 2.14,
+      "burstiness_score": 0.31
+    }
+  },
+  "rubric_grading": {
+    "total_score": 88,
+    "max_score": 100,
+    "model_used": "bigcode/starcoder2-3b-local-rag",
+    "breakdown": [
+      {
+        "criterion": "Architecture & Modularity",
+        "awarded": 23,
+        "max": 25,
+        "feedback": "Clean separation of concerns."
+      }
+    ]
+  },
+  "created_at": "2026-11-06T00:10:00Z"
+}
+```
+
+**Indexes:**
+- `{"submission_id": 1}`
+- `{"ai_risk_score": -1}`
+
+---
+
+### 3.5 `viva_questions` (Defend-Your-Code Oral Interrogation Cards)
+Stores automatically synthesized oral viva questions targeting high-complexity AST hotspots.
+
+```json
+{
+  "_id": "uuid-v4",
+  "submission_id": "uuid-submission",
+  "questions": [
+    {
+      "question_id": "viva-1",
+      "target_file": "core/network.py",
+      "line_number": 84,
+      "category": "Architectural Rationale",
+      "question": "In line 84 you pass socket.SO_REUSEADDR. Why is this flag necessary?",
+      "expected_concept": "Prevents Address already in use error caused by TIME_WAIT state.",
+      "catch_trigger": "Student claims it makes networking faster."
+    }
+  ],
+  "generated_at": "2026-11-06T00:00:00Z"
+}
+```
+
+**Indexes:**
+- `{"submission_id": 1}`

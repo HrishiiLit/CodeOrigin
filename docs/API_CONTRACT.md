@@ -248,7 +248,7 @@ Return the repository file tree for an archive or GitHub submission.
 
 ---
 
-### 2.3 Future Endpoints Reserved for Phases 3–7
+### 2.3 Phase 3–7 Endpoints Baseline
 
 | Method | Endpoint | Phase | Purpose |
 |---|---|---|---|
@@ -260,3 +260,234 @@ Return the repository file tree for an archive or GitHub submission.
 | `GET` | `/api/v1/submissions/{id}/reviews` | 5 | List reviewer feedback notes for submission |
 | `POST` | `/api/v1/integrations/github/issues/draft` | 7 | Prepare GitHub issue draft |
 | `POST` | `/api/v1/integrations/github/issues` | 7 | Submit GitHub issue upon explicit faculty approval |
+
+---
+
+## 3. Version 2 (V2) Endpoints — Automated Evaluation & Authenticity Bot
+
+### 3.1 Authenticity & Open-Source Clone Detection
+
+#### `POST /api/v1/submissions/{id}/authenticity`
+Triggers Software Heritage cryptographic hash verification, GitHub anchor search, and Git commit graph forensics on an ingested repository.
+
+- **Path Parameters:**
+  - `id` (String UUID, **Required**): Target submission ID.
+- **Response 200 OK:**
+```json
+{
+  "submission_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "authenticity_rating": "SUSPICIOUS",
+  "confidence_score": 0.88,
+  "software_heritage": {
+    "total_files_scanned": 15,
+    "matching_files_count": 14,
+    "earliest_upstream_appearance": "2021-04-12T10:00:00Z",
+    "upstream_sources": [
+      "https://github.com/original-author/distributed-cache"
+    ]
+  },
+  "distinctive_anchors": {
+    "anchors_probed": 3,
+    "github_matches": [
+      {
+        "anchor_text": "Invalid dimension stride configuration encountered in buffer allocator",
+        "repository_url": "https://github.com/original-author/distributed-cache",
+        "file_path": "core/alloc.py"
+      }
+    ]
+  },
+  "git_forensics": {
+    "total_commits": 2,
+    "lines_added": 4820,
+    "lines_deleted": 12,
+    "churn_ratio": 0.002,
+    "branch_count": 1,
+    "has_feature_branches": false,
+    "author_email_match": false,
+    "flags": ["ATOMIC_BULK_DUMP", "ZERO_CHURN", "AUTHOR_MISMATCH"]
+  },
+  "evaluated_at": "2026-11-06T00:00:00Z"
+}
+```
+
+---
+
+### 3.2 Plagiarism & Division Cohort Similarity
+
+#### `POST /api/v1/projects/{project_id}/cohort-evaluate`
+Asynchronously triggers token-based Winnowing and pairwise similarity calculation across all submissions in a university division/project.
+
+- **Path Parameters:**
+  - `project_id` (String UUID, **Required**): Target project/assignment ID.
+- **Request Body (Optional):**
+```json
+{
+  "similarity_threshold": 0.65,
+  "k_gram": 25,
+  "window_size": 4
+}
+```
+- **Response 202 Accepted:**
+```json
+{
+  "status": "processing",
+  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "total_submissions": 48,
+  "message": "Cohort similarity evaluation initiated."
+}
+```
+
+#### `GET /api/v1/projects/{project_id}/cohort-matrix`
+Returns the pairwise similarity matrix, top similarity pairs, and detected collusion clusters.
+
+- **Response 200 OK:**
+```json
+{
+  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "evaluated_at": "2026-11-06T00:05:00Z",
+  "collusion_clusters": [
+    {
+      "cluster_id": "cluster-1",
+      "student_ids": ["student-alex", "student-bob"],
+      "similarity_score": 0.89,
+      "matched_blocks": [
+        {
+          "submission_a": "sub-1",
+          "file_a": "engine.py",
+          "lines_a": [42, 115],
+          "submission_b": "sub-2",
+          "file_b": "core_engine.py",
+          "lines_b": [38, 111],
+          "tokens_shared": 340
+        }
+      ]
+    }
+  ],
+  "matrix": [
+    {"sub_a": "sub-1", "sub_b": "sub-2", "score": 0.89},
+    {"sub_a": "sub-1", "sub_b": "sub-3", "score": 0.12}
+  ]
+}
+```
+
+---
+
+### 3.3 Multi-Signal AI Code Detection
+
+#### `POST /api/v1/submissions/{id}/ai-detection`
+Evaluates stylometry markers, docstring patterns, prompt leak artifacts, and token perplexity to compute an AI generation risk index.
+
+- **Response 200 OK:**
+```json
+{
+  "submission_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "ai_risk_score": 0.82,
+  "risk_level": "HIGH",
+  "signals": {
+    "stylometry": {
+      "pedantic_comment_density": 0.38,
+      "over_engineered_docstring_count": 8,
+      "flagged_comments": ["# Initialize counter variable to zero"]
+    },
+    "prompt_artifacts": {
+      "leaked_markdown_tokens": 1,
+      "chat_disclaimers_found": 0
+    },
+    "perplexity": {
+      "average_token_entropy": 2.14,
+      "burstiness_score": 0.31,
+      "classification": "UNIFORM_LOW_ENTROPY"
+    },
+    "evolution_velocity": {
+      "instantaneous_loc_jump": 1200,
+      "incremental_revisions": 0
+    }
+  },
+  "disclaimer": "AI detection heuristics are advisory indicators and should not be used as the sole basis for academic sanctions."
+}
+```
+
+---
+
+### 3.4 "Defend Your Code" Oral Viva Question Generator
+
+#### `POST /api/v1/submissions/{id}/viva-questions`
+Analyzes AST complexity hotspots and generates 3 pointed interview questions with expected answers for the instructor to test genuine code ownership.
+
+- **Response 200 OK:**
+```json
+{
+  "submission_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "questions": [
+    {
+      "question_id": "viva-1",
+      "target_file": "core/network.py",
+      "line_number": 84,
+      "category": "Architectural Rationale",
+      "question": "In line 84 you pass `socket.SO_REUSEADDR` to `setsockopt`. Why is this flag necessary and what behavior occurs upon server restart without it?",
+      "expected_concept": "Prevents 'Address already in use' error caused by socket TIME_WAIT state.",
+      "catch_trigger": "Student cannot explain TIME_WAIT socket states or says it makes connections faster."
+    },
+    {
+      "question_id": "viva-2",
+      "target_file": "engine/optimizer.py",
+      "line_number": 142,
+      "category": "Algorithmic Complexity",
+      "question": "What is the worst-case space complexity of your recursive memoization cache in `calculate_optimal_path`, and how is cache eviction handled?",
+      "expected_concept": "O(V + E) or O(N^2) state space; cache is unbounded unless lru_cache maxsize is supplied.",
+      "catch_trigger": "Student claims the function uses O(1) memory or doesn't know where the cache is stored."
+    }
+  ]
+}
+```
+
+---
+
+### 3.5 Rubric-Based LLM / RAG Semantic Grading
+
+#### `POST /api/v1/submissions/{id}/semantic-grade`
+Executes an open-weight Hugging Face model or local RAG pipeline to grade the submission against assignment rubric guidelines.
+
+- **Request Body:**
+```json
+{
+  "rubric_id": "rubric-assignment-final",
+  "custom_constraints": "Must not use external network libraries; must implement custom binary tree."
+}
+```
+- **Response 200 OK:**
+```json
+{
+  "submission_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "total_score": 88,
+  "max_score": 100,
+  "breakdown": [
+    {
+      "criterion": "Architecture & Modularity",
+      "awarded": 23,
+      "max": 25,
+      "feedback": "Clean separation between network socket handling and parsing logic."
+    },
+    {
+      "criterion": "Error Handling & Edge Cases",
+      "awarded": 20,
+      "max": 25,
+      "feedback": "Lacks handling for truncated packets in buffer read loops."
+    },
+    {
+      "criterion": "Constraint Adherence",
+      "awarded": 25,
+      "max": 25,
+      "feedback": "Strictly adheres to standard library constraints without unauthorized dependencies."
+    },
+    {
+      "criterion": "Documentation & Typings",
+      "awarded": 20,
+      "max": 25,
+      "feedback": "Core models have type hints; utility helpers lack docstrings."
+    }
+  ],
+  "model_used": "bigcode/starcoder2-3b-local-rag",
+  "graded_at": "2026-11-06T00:10:00Z"
+}
+```

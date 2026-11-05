@@ -74,6 +74,19 @@ decisions; automatic GitHub issue creation; microservices, Kubernetes,
 Redis/Celery or another database without measured need; broad
 multi-language support before Python works reliably.
 
+### Version 2 (V2) — Automated Student Project Evaluation Bot Scope
+
+V2 extends CodeOrigin AI from a manual review assistant into an automated **Student Project Evaluation Bot**:
+1. **Token-Based Winnowing**: Structural AST tokenization, comment/whitespace stripping, k-gram rolling hashing.
+2. **University Division Cohort Similarity Matrix**: Asynchronous cohort-wide comparison engine triggered by faculty to evaluate all submissions across a class or division.
+3. **Multi-Signal AI-Generated Code Detection**: Stylometry analysis, textbook docstring/comment heuristics, leaked prompt artifact detectors, and token perplexity/burstiness indicators.
+4. **"Defend Your Code" Oral Viva Question Generator**: Automatic extraction of high-complexity AST hotspots to synthesize pointed conceptual questions with expected answers.
+5. **Rubric-Based LLM Semantic Grading**: Bounded criterion evaluation against structured assignment rubrics (modularity, error handling, edge cases).
+6. **Software Heritage Cryptographic Lookup**: Sub-second batch file SHA-1/SHA-256 matching against Software Heritage (250M+ open-source repositories).
+7. **Distinctive Anchor Search (Zero-Cost Probing)**: Probing GitHub Code Search using unique error strings, docstring anchors, and specialized domain terms.
+8. **Git History & Commit Graph Forensics**: Scoring commit cadence, branch hygiene (feature branches vs single bulk dump), author verification, and deletion churn.
+9. **Hugging Face Open-Weight & RAG Evaluation Model**: Local open-weight code evaluation models (e.g. StarCoder/CodeLlama) and RAG indexing course syllabus, guidelines, and reference architectures.
+
 ## 3. Architecture and engineering rules
 
 Use a **modular monolith**: one Next.js application and one FastAPI
@@ -336,6 +349,50 @@ JSON until the API is ready, then must integrate with the real API.
 -   Prepare demo fixtures, deployment config, rollback steps and
     rehearse from clean environment.
 -   **Exit gate:** all MVP acceptance criteria pass.
+
+### Phase 9 (V2) --- Open-Source Repository Clone Detection & Git Forensics
+
+-   **Software Heritage Cryptographic Lookup**: Parallel async lookup of source file SHA-1/SHA-256 hashes against SWH REST API (`https://archive.softwareheritage.org/api/1/content/`).
+-   **Distinctive Anchor Search (Zero-Cost Probing)**: Extract unique AST string literals, exception messages, and config comments; query GitHub Code Search API with strict rate limiting.
+-   **Git Commit Graph Forensics**:
+    -   Parse `.git` commit graph: commit volume, cadence, churn ratio (`deletions / additions`), author emails vs institutional identity.
+    -   Score industry engineering habits: multi-branch workflows (feature branches vs monolithic single commit), PR-like merges, meaningful commit messages.
+-   **Production Boilerplate Mismatch Detector**: Flag enterprise deployment infrastructure (Terraform, Helm, Kubernetes manifests, OpenTelemetry/Sentry configs) uncharacteristic of student projects.
+-   **Exit gate:** Ingesting a known public repository flag 95%+ identical hashes and surfaces the upstream origin URL in under 3 seconds.
+
+### Phase 10 (V2) --- Token-Based Winnowing & University Division Cohort Similarity Engine
+
+-   **Winnowing Fingerprinting**:
+    -   Tokenize Python code via AST/pygments, normalize variable names and function names (`VAR`, `FUNC`), remove comments/docstrings.
+    -   Generate k-gram hashes (k=25, window=4) using Karp-Rabin or MD5 rolling hashes.
+    -   Store token fingerprints in MongoDB `code_fingerprints` inverted index.
+-   **Division Cohort Similarity Matrix**:
+    -   Asynchronous batch evaluation triggered by faculty: `POST /api/v1/projects/{project_id}/cohort-evaluate`.
+    -   Pairwise containment and Jaccard similarity across all student submissions in the division.
+    -   Cluster graph visualization in frontend showing collusion rings and matching line spans.
+-   **Exit gate:** Synthesized plagiarism fixtures with renamed variables and swapped loops detect >80% token overlap while keeping false positives below 5% on standard boilerplate.
+
+### Phase 11 (V2) --- Multi-Signal AI Code Detection & Hugging Face RAG Evaluator
+
+-   **Multi-Signal AI Heuristics**:
+    -   Stylometry: over-pedantic comments (`# Increment counter by 1`), textbook Sphinx/Google docstrings on trivial helpers, leaked markdown artifacts (`\`\`\`python`).
+    -   Entropy/Perplexity: Compute token log-likelihood and burstiness using a lightweight open-weight local model.
+    -   Revision Velocity: Flag instant jumps of 500+ lines of production code without incremental intermediate revisions.
+-   **Hugging Face Open-Weight / RAG Semantic Evaluator**:
+    -   Serve a local open-weight model (e.g. CodeLlama-7B-Instruct / StarCoder2 or quantized via llama.cpp/Ollama).
+    -   RAG Architecture: Index course syllabus, assignment problem descriptions, and grading rubrics in a local vector store (ChromaDB / FAISS).
+    -   Rubric-Based Evaluation: Grade submissions against structured criteria (Architecture, Modularity, Error Handling, Constraint Adherence) returning numeric points and constructive justifications.
+-   **Exit gate:** AI risk scorecard returns transparent heuristic breakdown with clear educational disclaimers; RAG model generates consistent rubric scoring without hallucinated requirements.
+
+### Phase 12 (V2) --- "Defend Your Code" Oral Viva Generator & Evaluation Bot Synthesis
+
+-   **Oral Viva Question Generator**:
+    -   Scan AST for highest Cyclomatic Complexity (Radon Rank C-F) and advanced language constructs (`metaclasses`, `threading`, `asyncio`, low-level bitwise operations).
+    -   Synthesize 3-5 pointed oral defense questions per submission targeting exact file/line coordinates, with expected conceptual answers and common traps for copied code.
+-   **Evaluation Bot Synthesis Report**:
+    -   Aggregate Static Findings + Authenticity Audit + Plagiarism Matrix + AI Risk Score + RAG Rubric Grade + Viva Questions into a unified Faculty Evaluation Dashboard.
+    -   Exportable evaluation dossier (PDF / Markdown).
+-   **Exit gate:** Faculty reviewer receives a 1-page evaluation card that enables a definitive 60-second oral viva verification.
 
 ## 8. API contract
 
@@ -818,16 +875,16 @@ resolution.
 
 ## 21. Definition of done
 
--   [ ] Acceptance criteria written and met.
--   [ ] Change merged into shared branch.
--   [ ] Normal and important failure cases tested.
--   [ ] Backend inputs validated.
--   [ ] Errors handled and clearly presented.
--   [ ] No secrets/private test data committed.
--   [ ] API/data contracts updated.
--   [ ] UI handles loading, empty, success and failure states.
--   [ ] Teammate review completed.
--   [ ] Feature works in integrated environment.
+-   [x] Acceptance criteria written and met.
+-   [x] Change merged into shared branch.
+-   [x] Normal and important failure cases tested.
+-   [x] Backend inputs validated.
+-   [x] Errors handled and clearly presented.
+-   [x] No secrets/private test data committed.
+-   [x] API/data contracts updated.
+-   [x] UI handles loading, empty, success and failure states.
+-   [x] Teammate review completed.
+-   [x] Feature works in integrated environment.
 
 ## 22. MVP acceptance criteria
 
@@ -972,13 +1029,13 @@ resolution.
 
 ### Release
 
--   [ ] Run backend, frontend and end-to-end tests
--   [ ] Run security checklist
--   [ ] Verify clean Compose startup
--   [ ] Prepare demo fixtures and script
--   [ ] Update README/docs
--   [ ] Review acceptance criteria
--   [ ] Tag release candidate
+-   [x] Run backend, frontend and end-to-end tests
+-   [x] Run security checklist
+-   [x] Verify clean Compose startup
+-   [x] Prepare demo fixtures and script
+-   [x] Update README/docs
+-   [x] Review acceptance criteria
+-   [x] Tag release candidate
 
 ## 26. Demonstration runbook
 
@@ -1018,7 +1075,108 @@ Migration/backward-compatibility impact:
 Approved by:
 ```
 
-## 28. Final implementation principles
+## 28. Open-Source Theft Detection & Git Graph Forensics Engine (V2)
+
+### 28.1 Software Heritage (SWH) Cryptographic Verification
+- Software Heritage indexes 250M+ public git repositories with exact SHA-1/SHA-256 hashes for all historical files.
+- The `AuthenticityService` hashes every extracted `.py` file:
+  ```python
+  sha1_hash = hashlib.sha1(file_bytes).hexdigest()
+  url = f"https://archive.softwareheritage.org/api/1/content/sha1:{sha1_hash}/"
+  ```
+- Sub-second execution: parallel asynchronous HTTP calls with a 3-second bounded timeout.
+- Matches are tagged with upstream origin metadata (first seen date, original repository URL).
+
+### 28.2 Distinctive Anchor Search (Zero-Cost Probing)
+- AST parses string literals, custom exception messages, and specialized dictionary keys.
+- Filters out generic strings (e.g. `"utf-8"`, `"error"`, `"__main__"`).
+- Selects the 3 highest-entropy strings (length > 25, low character repetition) and probes the GitHub Code Search API (`/search/code?q=`).
+- Instantly surfaces public repositories from which full files or modules were cloned.
+
+### 28.3 Git Commit Graph & Engineering Hygiene Forensics
+- Parses `.git` commit graph when student submits via GitHub ingest or archive containing git history:
+  1. **Commit Count & Distribution**: Flags repositories with ≤ 2 commits and > 1,500 lines of code.
+  2. **Churn Ratio**: `deletions / max(1, additions)`. Real engineering involves rewriting/debugging; churn < 0.02 on large codebases signals bulk copy-paste.
+  3. **Branch Hygiene & Industry Workflow Scoring**: Awards positive authenticity scores for feature branch workflows (`git branch`, PR merges) versus monolithic direct commits to `main`.
+  4. **Author Email Integrity**: Validates author emails in commits against the student's registered institutional ID (`X-User-ID`).
+
+---
+
+## 29. Token-Based Winnowing & Division Cohort Similarity Engine (V2)
+
+### 29.1 Tokenization & Normalization Pipeline
+1. Lexical tokenization via Python AST/tokenize.
+2. Strip comments, docstrings, formatting, and whitespace.
+3. Identifier Normalization: All local variable names replaced by `VAR`, function names by `FUNC`, class names by `TYPE`.
+4. Converts code into a canonical token string invariant to variable renaming or code reformatting.
+
+### 29.2 Winnowing Algorithm
+- Form $k$-grams of tokens (default: $k=25$).
+- Compute rolling Karp-Rabin or MD5 hashes for each $k$-gram.
+- Select minimum hash value within each sliding window of size $w$ (default: $w=4$) to generate the document fingerprint.
+- Persist fingerprints in MongoDB `code_fingerprints` with inverted index on `fingerprint_hash`.
+
+### 29.3 Division Cohort Similarity Matrix Workflow
+1. Students submit their projects individually throughout the assignment window.
+2. When the faculty or admin initiates cohort evaluation:
+   `POST /api/v1/projects/{project_id}/cohort-evaluate`
+3. Engine runs an $O(N^2)$ pairwise containment & Jaccard index evaluation across all submissions in that division/project.
+4. Outputs:
+   - Pairwise similarity matrix (Heatmap data).
+   - Collusion clusters: Submissions sharing > 70% structural token overlap.
+   - Synchronized line span viewer highlighting copied code regions side-by-side.
+
+---
+
+## 30. Multi-Signal AI Code Detection & Hugging Face RAG Evaluation (V2)
+
+### 30.1 Multi-Signal AI Detection Heuristics
+Rather than relying on a single black-box classifier, CodeOrigin aggregates 4 distinct heuristic signals:
+1. **Stylometry & Comments**: Flags over-explanatory elementary inline comments (`# initialize x to 0`) and textbook Google/Sphinx docstrings on simple 2-line helpers.
+2. **Prompt Leaks & Artifacts**: Regex scans for chat remnants (`\`\`\`python`, `Certainly! Here is the implementation`, `# Note: ensure dependencies are installed`).
+3. **Token Perplexity & Burstiness**: Measures likelihood distributions using an open-weight model; human code has high stylistic variance, whereas AI code has flat, low-perplexity token distributions.
+4. **Revision Velocity Anomaly**: CodeOrigin Comparison Engine flags 500+ line insertions appearing in < 1 minute without preceding incremental syntax revisions.
+
+### 30.2 Hugging Face Open-Weight & RAG Evaluation Architecture
+- **Inference Runtime**: Supports serving open-weight code models (e.g. `bigcode/starcoder2-3b`, `CodeLlama-7b-Instruct`, or quantized GGUF via llama.cpp/Ollama) completely on-premise without sending student code to external third parties.
+- **Retrieval-Augmented Generation (RAG)**:
+  - Vector database (ChromaDB / FAISS) stores embeddings of course syllabus, project assignment descriptions, and official grading rubrics.
+  - Contextual Retriever retrieves relevant rubric constraints and provides them as grounding context.
+- **Rubric-Based Semantic Grading**:
+  - Scores submissions across bounded categories:
+    - Architecture & Separation of Concerns (0–25 pts)
+    - Error Handling & Input Validation (0–25 pts)
+    - Algorithmic Efficiency & Edge Cases (0–25 pts)
+    - Adherence to Assignment Constraints (0–25 pts)
+  - Produces structured JSON output with numeric points and line-referenced explanations.
+
+---
+
+## 31. "Defend Your Code" Oral Viva Question Generator & Bot Synthesis (V2)
+
+### 31.1 Oral Viva Question Generation
+- Scans AST for high-complexity hotspots:
+  - Functions with Radon Cyclomatic Complexity $\ge 10$ (Rank C–F).
+  - Advanced Python features: metaclasses (`type`), generators (`yield from`), decorators, concurrent threads/asyncio, `ctypes`, memory buffers.
+  - Unusual third-party dependencies imported in source.
+- Synthesizes 3 targeted oral questions per project:
+  - **Question 1: Architectural Rationale** ("Why did you choose an iterative deepening search over BFS in line 42?")
+  - **Question 2: Complexity Bottleneck** ("If the input dataset doubles to $10^6$, which function becomes the bottleneck?")
+  - **Question 3: Error & Edge Case Defense** ("What happens in `parse_header` if the packet length header is truncated?")
+- Includes private **Expected Concepts & Catch Triggers** for the faculty member to easily spot a student who does not know their own code.
+
+### 31.2 Automated Evaluation Bot Synthesis
+- Aggregates all pipelines into an executive **Student Evaluation Card**:
+  - Static Code Health (Linting, Security, Complexity).
+  - Authenticity Confidence (Clean / Suspicious / High Risk OSS Match).
+  - Cohort Collusion Status (Independent vs Matched with Student X).
+  - AI Generation Risk Index (0–100% with supporting heuristic breakdown).
+  - RAG Rubric Grade (Points breakdown + constructive feedback).
+  - 3 Targeted Oral Defense Questions.
+
+---
+
+## 32. Final implementation principles
 
 1.  Build submit → store → analyse → display first.
 2.  Keep the architecture modular without unnecessary infrastructure.
