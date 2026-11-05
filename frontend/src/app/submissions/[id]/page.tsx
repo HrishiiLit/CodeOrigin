@@ -16,6 +16,7 @@ import { Submission, RepositoryTreeResponse, AnalysisRunResponse } from '@/types
 import { StatusBadge } from '@/components/StatusBadge';
 import { RepositoryFileBrowser } from '@/components/RepositoryFileBrowser';
 import { GitHubIssueModal } from '@/components/GitHubIssueModal';
+import { useAuth } from '@/context/AuthContext';
 import {
   Github,
   ExternalLink,
@@ -42,6 +43,7 @@ export default function SubmissionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const submissionId = params.id as string;
+  const { role } = useAuth();
 
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [repoTree, setRepoTree] = useState<RepositoryTreeResponse | null>(null);
@@ -242,13 +244,15 @@ export default function SubmissionDetailPage() {
             <GitCompare className="w-3.5 h-3.5" />
             Compare
           </Link>
-          <Link
-            href="/review"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-xs hover:shadow-indigo-500/25"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            Faculty Review
-          </Link>
+          {role !== 'student' && (
+            <Link
+              href="/review"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-xs hover:shadow-indigo-500/25"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Faculty Review
+            </Link>
+          )}
           <button
             onClick={handleDelete}
             disabled={deleting}
@@ -448,41 +452,43 @@ export default function SubmissionDetailPage() {
               </div>
             )}
 
-            {/* Selection & GitHub Export Action Bar */}
-            <div className="p-3.5 bg-slate-50/90 border border-slate-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={handleSelectAllFiltered}
-                  className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-700 font-semibold transition shadow-xs"
-                >
-                  Select All Filtered ({filteredFindings.length})
-                </button>
-                {selectedFindingIds.length > 0 && (
+            {/* Selection & GitHub Export Action Bar (Faculty & Admin Only) */}
+            {role !== 'student' && (
+              <div className="p-3.5 bg-slate-50/90 border border-slate-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
-                    onClick={handleDeselectAll}
-                    className="px-2.5 py-1.5 text-slate-500 hover:text-slate-900 font-medium transition"
+                    onClick={handleSelectAllFiltered}
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-700 font-semibold transition shadow-xs"
                   >
-                    Clear ({selectedFindingIds.length})
+                    Select All Filtered ({filteredFindings.length})
                   </button>
-                )}
-                <span className="text-slate-300">|</span>
-                <span className="text-slate-600 font-medium">
-                  {selectedFindingIds.length} finding{selectedFindingIds.length === 1 ? '' : 's'} selected
-                </span>
-              </div>
+                  {selectedFindingIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleDeselectAll}
+                      className="px-2.5 py-1.5 text-slate-500 hover:text-slate-900 font-medium transition"
+                    >
+                      Clear ({selectedFindingIds.length})
+                    </button>
+                  )}
+                  <span className="text-slate-300">|</span>
+                  <span className="text-slate-600 font-medium">
+                    {selectedFindingIds.length} finding{selectedFindingIds.length === 1 ? '' : 's'} selected
+                  </span>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => setIsGitHubModalOpen(true)}
-                disabled={selectedFindingIds.length === 0}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-xl font-semibold transition shadow-xs"
-              >
-                <Github className="w-4 h-4" />
-                Export to GitHub Issue
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setIsGitHubModalOpen(true)}
+                  disabled={selectedFindingIds.length === 0}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-xl font-semibold transition shadow-xs"
+                >
+                  <Github className="w-4 h-4" />
+                  Export to GitHub Issue
+                </button>
+              </div>
+            )}
 
             {/* Filter Tabs */}
             <div className="flex items-center justify-between gap-4 flex-wrap border-b border-slate-200/80 pb-3">

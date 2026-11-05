@@ -7,7 +7,7 @@ import { Submission, Review, ReviewReportResponse } from '@/types';
 import { StatusBadge } from '@/components/StatusBadge';
 
 import { useAuth } from '@/context/AuthContext';
-import { BookOpen, ShieldAlert, Repeat, Github } from 'lucide-react';
+import { BookOpen, ShieldAlert, Repeat, Github, Lock } from 'lucide-react';
 import { GitHubIssueModal } from '@/components/GitHubIssueModal';
 import { FacultyReportViewer } from '@/components/FacultyReportViewer';
 
@@ -98,8 +98,56 @@ export default function ReviewPage() {
 
   const selectedSub = submissions.find((s) => s.submission_id === selectedSubId);
 
+  // Hierarchy Level 2 Gate: Students cannot view or author faculty evaluations
+  if (role === 'student') {
+    return (
+      <div className="max-w-xl mx-auto my-16 glass-panel rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-xl border border-purple-200/80 animate-fadeIn">
+        <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-300 text-purple-700 flex items-center justify-center mx-auto shadow-inner">
+          <Lock className="w-8 h-8 text-purple-600" />
+        </div>
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100/70 border border-purple-200 text-purple-900 text-xs font-bold uppercase tracking-wider">
+            Hierarchy Level 2 Required
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            Faculty Evaluation Workspace Restricted
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+            You are signed in as <span className="font-semibold text-slate-800">{user?.name || 'Student'}</span> with the <span className="font-mono font-bold text-indigo-600 uppercase">STUDENT</span> role. Student assignment evaluation, rubric grading, and formal review report generation are strictly reserved for Faculty Members and Administrators.
+          </p>
+        </div>
+
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 text-left text-xs space-y-2">
+          <div className="font-bold text-slate-700 uppercase tracking-wide text-[10px]">Hierarchy Boundary Enforcement:</div>
+          <div className="flex items-center gap-2 font-semibold text-slate-500">
+            <span className="w-2 h-2 rounded-full bg-indigo-500" /> Current: Level 1 (Student) - View & scan own code
+          </div>
+          <div className="flex items-center gap-2 font-bold text-purple-800">
+            <span className="w-2 h-2 rounded-full bg-purple-500" /> Required: Level 2 (Faculty) - Qualitative evaluation & reports
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Link
+            href="/"
+            className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition"
+          >
+            ← Return to Dashboard
+          </Link>
+          <button
+            type="button"
+            onClick={() => switchRole('faculty')}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold transition shadow-xs"
+          >
+            Switch to Faculty Mode
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="border-b border-slate-200 pb-4">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Faculty Review & Reporting Hub</h1>
@@ -107,26 +155,6 @@ export default function ReviewPage() {
           Inspect student code submissions, attach qualitative evaluation feedback, and generate formal review reports.
         </p>
       </div>
-
-      {/* Student notice banner */}
-      {role === 'student' && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-4 text-xs text-amber-900">
-          <div className="flex items-center gap-2.5">
-            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>
-              You are currently signed in as <strong>{user?.name || 'Student'}</strong> (Student mode). Faculty reviews and formal evaluations are submitted by instructors.
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => switchRole('faculty')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition shrink-0"
-          >
-            <Repeat className="w-3.5 h-3.5" />
-            Switch to Faculty Mode
-          </button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
         {/* Left column: Submissions list */}

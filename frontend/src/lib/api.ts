@@ -199,7 +199,7 @@ export async function getComparison(id: string): Promise<ComparisonResponse> {
 export async function createReview(payload: CreateReviewPayload): Promise<Review> {
   const res = await fetch(`${API_BASE_URL}/api/v1/reviews`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
   });
   return handleResponse<Review>(res);
@@ -208,6 +208,7 @@ export async function createReview(payload: CreateReviewPayload): Promise<Review
 export async function listReviews(submissionId: string): Promise<Review[]> {
   const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${submissionId}/reviews`, {
     cache: 'no-store',
+    headers: getAuthHeaders(),
   });
   return handleResponse<Review[]>(res);
 }
@@ -215,6 +216,7 @@ export async function listReviews(submissionId: string): Promise<Review[]> {
 export async function getSubmissionReport(submissionId: string): Promise<ReviewReportResponse> {
   const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${submissionId}/report`, {
     cache: 'no-store',
+    headers: getAuthHeaders(),
   });
   return handleResponse<ReviewReportResponse>(res);
 }
@@ -228,6 +230,7 @@ export function getDownloadUrl(submissionId: string, path?: string): string {
 export async function deleteSubmission(submissionId: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${submissionId}`, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
   if (!res.ok) {
     throw new ApiClientError(`Failed to delete submission (${res.status})`, 'DELETE_ERROR', res.status);
@@ -255,7 +258,7 @@ export async function getDemoUsers(): Promise<UserProfile[]> {
 export async function prepareIssueDraft(payload: IssueDraftRequest): Promise<IssueDraftResponse> {
   const res = await fetch(`${API_BASE_URL}/api/v1/integrations/github/issues/draft`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(payload),
   });
   return handleResponse<IssueDraftResponse>(res);
@@ -265,7 +268,10 @@ export async function createGitHubIssue(
   payload: CreateIssueRequest,
   actorId?: string
 ): Promise<CreateIssueResponse> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...getAuthHeaders(),
+  };
   if (actorId) {
     headers['X-User-ID'] = actorId;
   }
@@ -278,10 +284,14 @@ export async function createGitHubIssue(
 }
 
 /** Administration & System Governance */
-export async function getAdminStats(role: string = 'admin'): Promise<AdminOverviewResponse> {
+export async function getAdminStats(role?: string): Promise<AdminOverviewResponse> {
+  const headers: Record<string, string> = { ...getAuthHeaders() };
+  if (role) {
+    headers['X-User-Role'] = role;
+  }
   const res = await fetch(`${API_BASE_URL}/api/v1/admin/stats`, {
     cache: 'no-store',
-    headers: { 'X-User-Role': role },
+    headers,
   });
   return handleResponse<AdminOverviewResponse>(res);
 }
@@ -289,6 +299,7 @@ export async function getAdminStats(role: string = 'admin'): Promise<AdminOvervi
 export async function getAuditLogs(limit: number = 50): Promise<AuditEventItem[]> {
   const res = await fetch(`${API_BASE_URL}/api/v1/admin/audit-logs?limit=${limit}`, {
     cache: 'no-store',
+    headers: getAuthHeaders(),
   });
   return handleResponse<AuditEventItem[]>(res);
 }

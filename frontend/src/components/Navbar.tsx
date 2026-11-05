@@ -27,13 +27,19 @@ export const Navbar: React.FC = () => {
   const { user, role, switchRole, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const links = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/submissions', label: 'Submissions', icon: FileCode2 },
-    { href: '/compare', label: 'Compare', icon: GitCompare },
-    { href: '/review', label: 'Faculty Review', icon: CheckSquare2 },
-    { href: '/admin', label: 'Admin Stats', icon: BarChart3 },
+  const allLinks = [
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard, minRole: 'student' as const },
+    { href: '/submissions', label: 'Submissions', icon: FileCode2, minRole: 'student' as const },
+    { href: '/compare', label: 'Compare', icon: GitCompare, minRole: 'student' as const },
+    { href: '/review', label: 'Faculty Review', icon: CheckSquare2, minRole: 'faculty' as const },
+    { href: '/admin', label: 'Admin Stats', icon: BarChart3, minRole: 'admin' as const },
   ];
+
+  const links = allLinks.filter((link) => {
+    if (link.minRole === 'admin') return role === 'admin';
+    if (link.minRole === 'faculty') return role === 'faculty' || role === 'admin';
+    return true;
+  });
 
   return (
     <header className="sticky top-0 z-40 w-full glass-nav transition-all">

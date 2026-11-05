@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Body, Header, status
+from fastapi import APIRouter, Body, Header, HTTPException, status
 
 from app.schemas.github_issue import (
     CreateIssueRequest,
@@ -17,12 +17,20 @@ router = APIRouter(prefix="/integrations/github", tags=["GitHub Integration"])
     response_model=IssueDraftResponse,
     summary="Prepare GitHub issue draft from reviewer-selected findings",
 )
-def draft_github_issue(payload: IssueDraftRequest = Body(...)):
+def draft_github_issue(
+    payload: IssueDraftRequest = Body(...),
+    x_user_role: str = Header(default="faculty", alias="X-User-Role"),
+):
     """
     Constructs a structured issue title and Markdown body containing
     reviewer-selected static analysis findings.
-    Does NOT write to GitHub.
+    Enforces Faculty/Admin authorization gate.
     """
+    if x_user_role.lower() not in ("faculty", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Issue drafting requires Faculty or Administrator privileges.",
+        )
     return github_service.prepare_issue_draft(
         submission_id=payload.submission_id,
         finding_ids=payload.finding_ids,
@@ -41,11 +49,18 @@ def draft_github_issue(payload: IssueDraftRequest = Body(...)):
 async def create_github_issue(
     payload: CreateIssueRequest = Body(...),
     x_user_id: Optional[str] = Header(default="demo-faculty", alias="X-User-ID"),
+    x_user_role: str = Header(default="faculty", alias="X-User-Role"),
 ):
     """
     Creates an issue on the target GitHub repository.
     Enforces that 'confirmed' is True and records the approver in audit logs.
+    Enforces Faculty/Admin authorization gate.
     """
+    if x_user_role.lower() not in ("faculty", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Issue export requires Faculty or Administrator privileges.",
+        )
     actor = x_user_id or "demo-faculty"
     return await github_service.create_issue(
         submission_id=payload.submission_id,

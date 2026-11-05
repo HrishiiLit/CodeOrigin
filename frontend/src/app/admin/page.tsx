@@ -69,6 +69,57 @@ export default function AdminDashboardPage() {
     );
   }
 
+  // Hierarchy Level 3 Gate: Only Administrators and Deans can view system telemetry
+  if (role !== 'admin') {
+    return (
+      <div className="max-w-xl mx-auto my-16 glass-panel rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-xl border border-amber-200/80 animate-fadeIn">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-300 text-amber-700 flex items-center justify-center mx-auto shadow-inner">
+          <Lock className="w-8 h-8 text-amber-600" />
+        </div>
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100/70 border border-amber-200 text-amber-900 text-xs font-bold uppercase tracking-wider">
+            Hierarchy Level 3 Required
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            Restricted Administrator Workspace
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+            You are signed in as <span className="font-semibold text-slate-800">{user?.name || 'User'}</span> with the <span className="font-mono font-bold text-amber-700 uppercase">{role}</span> role. Institutional telemetry, campus-wide static analytics, and audit logs are strictly restricted to Academic Administrators and Deans.
+          </p>
+        </div>
+
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 text-left text-xs space-y-2">
+          <div className="font-bold text-slate-700 uppercase tracking-wide text-[10px]">Hierarchy Boundary Enforcement:</div>
+          <div className="flex items-center gap-2 text-slate-600">
+            <span className="w-2 h-2 rounded-full bg-slate-400" /> Level 1 (Student): Assignment Uploads & Self-Scan
+          </div>
+          <div className="flex items-center gap-2 text-slate-600">
+            <span className="w-2 h-2 rounded-full bg-purple-500" /> Level 2 (Faculty): Assignment Evaluation & Review Reports
+          </div>
+          <div className="flex items-center gap-2 font-bold text-amber-800">
+            <span className="w-2 h-2 rounded-full bg-amber-500" /> Level 3 (Admin): System Telemetry & Governance
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Link
+            href="/"
+            className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition"
+          >
+            ← Return to Dashboard
+          </Link>
+          <button
+            type="button"
+            onClick={() => switchRole('admin')}
+            className="px-4 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-xs font-semibold transition shadow-xs"
+          >
+            Switch to Dean / Admin Mode
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const submissions = stats?.submissions;
   const analysis = stats?.analysis;
   const reviews = stats?.reviews;
@@ -123,26 +174,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Role Notice If Not Admin */}
-      {role !== 'admin' && (
-        <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <Shield className="w-5 h-5 text-amber-600 shrink-0" />
-            <div>
-              <span>You are viewing telemetry as <strong>{user?.name || 'User'}</strong> ({role} role).</span>
-              <p className="text-amber-800 text-[11px] mt-0.5">Switch to Academic Dean / Admin mode to access full governance oversight.</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => switchRole('admin')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl font-semibold transition shadow-xs shrink-0"
-          >
-            <Repeat className="w-3.5 h-3.5" />
-            Switch to Admin Mode
-          </button>
-        </div>
-      )}
+
 
       {/* Navigation View Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">

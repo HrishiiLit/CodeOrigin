@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Body, Header, status
+from fastapi import APIRouter, Body, Header, HTTPException, status
 
 from app.schemas.review import (
     CreateReviewRequest,
@@ -20,7 +20,13 @@ router = APIRouter(tags=["Reviews & Reports"])
 def create_review(
     payload: CreateReviewRequest = Body(...),
     x_user_id: str = Header(default="demo-faculty", alias="X-User-ID"),
+    x_user_role: str = Header(default="faculty", alias="X-User-Role"),
 ):
+    if x_user_role.lower() not in ("faculty", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Faculty or Administrator privileges required to submit reviews (Hierarchy Level 2+).",
+        )
     author_id = payload.author_id or x_user_id
     return review_service.create_review(
         submission_id=payload.submission_id,
@@ -43,5 +49,13 @@ def list_submission_reviews(submission_id: str):
     response_model=ReviewReportResponse,
     summary="Generate a comprehensive review, analysis, and evolution report",
 )
-def get_submission_report(submission_id: str):
+def get_submission_report(
+    submission_id: str,
+    x_user_role: str = Header(default="faculty", alias="X-User-Role"),
+):
+    if x_user_role.lower() not in ("faculty", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Official report generation requires Faculty or Administrator privileges.",
+        )
     return review_service.generate_report(submission_id)

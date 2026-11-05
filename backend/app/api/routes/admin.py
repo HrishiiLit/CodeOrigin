@@ -15,7 +15,13 @@ def get_admin_stats(
     """
     Returns platform-wide administrative statistics across submissions,
     multi-tool static analyses, faculty evaluations, and lineage diffs.
+    Enforces Level 3 (Administrator) hierarchy check.
     """
+    if x_user_role.lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Administrator privileges required (Hierarchy Level 3).",
+        )
     return admin_service.get_overview_stats()
 
 
@@ -26,7 +32,13 @@ def get_audit_logs(
 ):
     """
     Returns chronologically ordered institutional audit events with actor attribution.
+    Enforces Level 3 (Administrator) hierarchy check.
     """
+    if x_user_role.lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Administrator privileges required (Hierarchy Level 3).",
+        )
     raw_events = audit_repository.list_events(limit=limit)
     return [
         AuditEventItem(
