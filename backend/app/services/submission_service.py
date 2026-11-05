@@ -172,6 +172,11 @@ class SubmissionService:
     @staticmethod
     def _to_response(doc: dict) -> SubmissionResponse:
         sub_type_val = doc.get("submission_type", SubmissionType.FILE.value)
+        try:
+            status_val = SubmissionStatus(doc.get("status", SubmissionStatus.QUEUED.value))
+        except (ValueError, KeyError):
+            status_val = SubmissionStatus.COMPLETED
+
         return SubmissionResponse(
             submission_id=doc["_id"],
             project_id=doc["project_id"],
@@ -185,10 +190,10 @@ class SubmissionService:
             total_files=doc.get("total_files", 1),
             source_files_count=doc.get("source_files_count", 1),
             source_files=doc.get("source_files", []),
-            status=SubmissionStatus(doc.get("status", SubmissionStatus.QUEUED.value)),
+            status=status_val,
             error_details=doc.get("error_details"),
             created_at=doc["created_at"],
-            updated_at=doc["updated_at"],
+            updated_at=doc.get("updated_at") or doc.get("created_at"),
         )
 
 

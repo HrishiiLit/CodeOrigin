@@ -110,5 +110,11 @@ class Settings(BaseSettings):
         path.mkdir(parents=True, exist_ok=True)
         return path
 
+    @property
+    def resolved_data_dir(self) -> Path:
+        path = self.resolved_storage_dir / "data"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
 
 settings = Settings()

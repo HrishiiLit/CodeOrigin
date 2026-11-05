@@ -57,7 +57,7 @@ class SubmissionResponse(BaseModel):
     status: SubmissionStatus
     error_details: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 class SubmissionListResponse(BaseModel):

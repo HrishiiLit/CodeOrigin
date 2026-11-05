@@ -4,11 +4,16 @@ from pymongo.collection import Collection
 from app.core.database import get_db
 from app.core.errors import PersistenceError
 from app.core.logging import logger
+from app.repositories.fallback_store import PersistentFileStore
 
 
 class ComparisonRepository:
     def __init__(self):
-        self._memory_store: Dict[str, dict] = {}
+        self._store = PersistentFileStore("comparisons.json")
+
+    @property
+    def _memory_store(self) -> Dict[str, dict]:
+        return self._store._data
 
     @property
     def _collection(self) -> Optional[Collection]:
@@ -30,7 +35,7 @@ class ComparisonRepository:
                     details=str(err),
                 )
         else:
-            self._memory_store[comp_id] = comparison_data
+            self._store.set(comp_id, comparison_data)
 
         return comparison_data
 
@@ -45,7 +50,7 @@ class ComparisonRepository:
                     message="Failed to retrieve comparison from database.",
                     details=str(err),
                 )
-        return self._memory_store.get(comparison_id)
+        return self._store.get(comparison_id)
 
     def find_by_pair(self, base_id: str, target_id: str) -> Optional[dict]:
         col = self._collection
@@ -54,15 +59,14 @@ class ComparisonRepository:
                 return col.find_one({
                     "base_submission_id": base_id,
                     "target_submission_id": target_id,
-                }, sort=[("created_at", -1)])
+                })
             except Exception as err:
-                logger.error(f"MongoDB query failed for pair ({base_id}, {target_id}): {err}")
+                logger.error(f"MongoDB query failed for comparison pair: {err}")
                 return None
-        matches = [
-            x for x in self._memory_store.values()
-            if x.get("base_submission_id") == base_id and x.get("target_submission_id") == target_id
-        ]
-        return matches[0] if matches else None
+        for item in self._store.values():
+            if item.get("base_submission_id") == base_id and item.get("target_submission_id") == target_id:
+                return item
+        return None
 
 
 comparison_repository = ComparisonRepository()

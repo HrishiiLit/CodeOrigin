@@ -48,6 +48,8 @@ storage/processed/*
 !storage/processed/.gitkeep
 storage/generated/*
 !storage/generated/.gitkeep
+storage/data/*
+!storage/data/.gitkeep
 
 # Operating system / IDE
 .DS_Store

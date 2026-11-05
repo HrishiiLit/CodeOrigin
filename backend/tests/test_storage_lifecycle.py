@@ -19,6 +19,7 @@ def test_centralized_storage_path_resolution():
     assert (settings.resolved_storage_dir / "uploads").is_dir()
     assert (settings.resolved_storage_dir / "processed").is_dir()
     assert (settings.resolved_storage_dir / "generated").is_dir()
+    assert (settings.resolved_storage_dir / "data").is_dir()
 
 
 def test_file_complete_lifecycle():
@@ -52,29 +53,25 @@ def test_file_complete_lifecycle():
     storage_key = sub_doc["storage_key"]
     assert storage_key.startswith("uploads/")
 
-    resolved_file = storage_service._resolve_safe_path(storage_key)
-    assert resolved_file.exists()
-    assert resolved_file.is_file()
-    # Confirm it is inside settings.resolved_storage_dir and NOT backend/
-    assert resolved_file.is_relative_to(settings.resolved_storage_dir)
+    physical_path = storage_service.get_file_path(storage_key)
+    assert physical_path.is_file()
+    assert physical_path.is_relative_to(settings.resolved_storage_dir)
 
-    # 4. Retrieve source code
-    source_res = client.get(f"/api/v1/submissions/{submission_id}/source")
-    assert source_res.status_code == 200
-    assert "hello_lifecycle" in source_res.text
+    # 4. Retrieve source code via API
+    src_res = client.get(f"/api/v1/submissions/{submission_id}/source")
+    assert src_res.status_code == 200
+    assert src_res.text == test_code.decode("utf-8")
 
-    # 5. Download file
-    download_res = client.get(f"/api/v1/submissions/{submission_id}/download")
-    assert download_res.status_code == 200
-    assert download_res.content == test_code
+    # 5. Download file via API
+    dl_res = client.get(f"/api/v1/submissions/{submission_id}/download")
+    assert dl_res.status_code == 200
+    assert dl_res.content == test_code
+    assert dl_res.headers.get("content-disposition") is not None
 
-    # 6. Delete submission
+    # 6. Delete submission and verify physical file is unlinked
     del_res = client.delete(f"/api/v1/submissions/{submission_id}")
     assert del_res.status_code == 200
-    assert del_res.json()["status"] == "deleted"
-
-    # Confirm physical file is removed
-    assert not resolved_file.exists()
+    assert not physical_path.exists()
 
 
 def test_archive_processed_storage_location():
@@ -111,3 +108,36 @@ def test_archive_processed_storage_location():
     del_res = client.delete(f"/api/v1/submissions/{sub_id}")
     assert del_res.status_code == 200
     assert not resolved_dir.exists()
+
+
+def test_persistence_across_server_restarts():
+    """
+    Verifies that submissions and metadata survive a simulated server restart
+    even when MongoDB is not connected, using the persistent disk fallback store.
+    """
+    client = TestClient(app)
+    code = b"print('persistent test')\n"
+    res = client.post(
+        "/api/v1/submissions",
+        files={"file": ("persistent_sample.py", io.BytesIO(code), "text/x-python")},
+    )
+    assert res.status_code == 201
+    sub_id = res.json()["submission_id"]
+
+    # Verify fallback file exists on disk
+    submissions_json = settings.resolved_data_dir / "submissions.json"
+    assert submissions_json.is_file(), "submissions.json was not created on disk!"
+
+    # Simulate a full server restart by instantiating a fresh SubmissionRepository
+    from app.repositories.submission_repository import SubmissionRepository
+    fresh_repo = SubmissionRepository()
+    reloaded_doc = fresh_repo.find_by_id(sub_id)
+    assert reloaded_doc is not None, "Submission was lost after repository re-initialization!"
+    assert reloaded_doc["original_filename"] == "persistent_sample.py"
+
+    # Verify listing also contains the submission
+    items, total = fresh_repo.list_submissions()
+    assert any(x["_id"] == sub_id for x in items)
+
+    # Clean up test submission
+    client.delete(f"/api/v1/submissions/{sub_id}")

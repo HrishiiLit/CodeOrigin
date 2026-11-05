@@ -5,11 +5,17 @@ from pymongo.collection import Collection
 
 from app.core.database import get_db
 from app.core.logging import logger
+from app.repositories.fallback_store import PersistentFileStore
 
 
 class AuditRepository:
     def __init__(self):
-        self._memory_store: List[dict] = []
+        self._store = PersistentFileStore("audit_events.json")
+
+    @property
+    def _memory_store(self) -> List[dict]:
+        """Backwards compatibility for tests checking _memory_store list."""
+        return self._store.values()
 
     @property
     def _collection(self) -> Optional[Collection]:
@@ -31,7 +37,7 @@ class AuditRepository:
             except Exception as err:
                 logger.warning(f"Could not persist audit event to MongoDB: {err}")
         else:
-            self._memory_store.append(event)
+            self._store.set(event["_id"], event)
 
         logger.info(f"Audit event logged: {action} by {actor_id}")
         return event
