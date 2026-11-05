@@ -14,6 +14,10 @@ import {
   AuthResponse,
   LoginPayload,
   UserProfile,
+  IssueDraftRequest,
+  IssueDraftResponse,
+  CreateIssueRequest,
+  CreateIssueResponse,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -244,4 +248,31 @@ export async function getDemoUsers(): Promise<UserProfile[]> {
   });
   return handleResponse<UserProfile[]>(res);
 }
+
+/** Phase 7 — GitHub Integration */
+export async function prepareIssueDraft(payload: IssueDraftRequest): Promise<IssueDraftResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/integrations/github/issues/draft`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<IssueDraftResponse>(res);
+}
+
+export async function createGitHubIssue(
+  payload: CreateIssueRequest,
+  actorId?: string
+): Promise<CreateIssueResponse> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (actorId) {
+    headers['X-User-ID'] = actorId;
+  }
+  const res = await fetch(`${API_BASE_URL}/api/v1/integrations/github/issues`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<CreateIssueResponse>(res);
+}
+
 

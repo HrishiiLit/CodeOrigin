@@ -177,3 +177,42 @@ export interface AuthResponse {
   user: UserProfile;
 }
 
+// Phase 7 — GitHub Integration
+export interface IssueDraftRequest {
+  submission_id: string;
+  finding_ids?: string[];
+  repository_url?: string;
+  custom_title?: string;
+  custom_notes?: string;
+}
+
+export interface IssueDraftResponse {
+  submission_id: string;
+  repository: string;
+  title: string;
+  body: string;
+  finding_count: number;
+  selected_finding_ids: string[];
+}
+
+export interface CreateIssueRequest {
+  submission_id: string;
+  repository: string;
+  title: string;
+  body: string;
+  confirmed: boolean;
+  finding_ids?: string[];
+}
+
+export interface CreateIssueResponse {
+  issue_id: number;
+  issue_number: number;
+  issue_url: string;
+  title: string;
+  repository: string;
+  created_at: string;
+  actor_id: string;
+  status: string;
+}
+
+
