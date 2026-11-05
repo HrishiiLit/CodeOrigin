@@ -104,7 +104,7 @@ export function GitHubIssueModal({
               <Github className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold tracking-tight">Create GitHub Issue (Phase 7)</h3>
+              <h3 className="text-sm font-bold tracking-tight">Create GitHub Issue</h3>
               <p className="text-[11px] text-slate-400">
                 Export selected findings to GitHub with deliberate reviewer approval
               </p>

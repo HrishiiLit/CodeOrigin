@@ -298,7 +298,7 @@ export default function ReviewPage() {
         </div>
       </div>
 
-      {/* Phase 7 GitHub Issue Modal */}
+      {/* GitHub Issue Modal */}
       {selectedSubId && (
         <GitHubIssueModal
           isOpen={isGitHubModalOpen}
